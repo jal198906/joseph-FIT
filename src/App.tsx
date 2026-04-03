@@ -105,16 +105,17 @@ export default function App() {
     let interval: NodeJS.Timeout;
     if (isStopwatchRunning) {
       interval = setInterval(() => {
-        setStopwatchTime(prevTime => prevTime + 1);
-      }, 1000);
+        setStopwatchTime(prevTime => prevTime + 10);
+      }, 10);
     }
     return () => clearInterval(interval);
   }, [isStopwatchRunning]);
 
-  const formatStopwatchTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  const formatStopwatchTime = (ms: number) => {
+    const mins = Math.floor(ms / 60000);
+    const secs = Math.floor((ms % 60000) / 1000);
+    const centis = Math.floor((ms % 1000) / 10);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${centis.toString().padStart(2, '0')}`;
   };
 
   const handleSaveName = (e: React.FormEvent) => {
