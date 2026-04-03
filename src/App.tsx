@@ -24,7 +24,11 @@ import {
   Upload,
   Play,
   Pause,
-  RotateCcw
+  RotateCcw,
+  Smartphone,
+  ClipboardList,
+  Check,
+  Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, addDays, startOfToday, isSameDay } from 'date-fns';
@@ -69,6 +73,10 @@ export default function App() {
       snack: ''
     }
   });
+
+  // Daily Tasks state
+  const [dailyTasks, setDailyTasks] = useState<{id: string, text: string, completed: boolean}[]>([]);
+  const [newTaskText, setNewTaskText] = useState('');
 
   // Stopwatch state
   const [stopwatchTime, setStopwatchTime] = useState(0);
@@ -118,6 +126,11 @@ export default function App() {
     const savedCustomDiets = localStorage.getItem('joseph_fit_custom_diets');
     if (savedCustomDiets) {
       setCustomDiets(JSON.parse(savedCustomDiets));
+    }
+
+    const savedDailyTasks = localStorage.getItem('joseph_fit_daily_tasks');
+    if (savedDailyTasks) {
+      setDailyTasks(JSON.parse(savedDailyTasks));
     }
   }, []);
 
@@ -175,6 +188,72 @@ export default function App() {
   };
 
   const allDiets = [...DIETS, ...customDiets];
+
+  const handleAddTask = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newTaskText.trim()) {
+      const updatedTasks = [...dailyTasks, { id: Date.now().toString(), text: newTaskText.trim(), completed: false }];
+      setDailyTasks(updatedTasks);
+      setNewTaskText('');
+      localStorage.setItem('joseph_fit_daily_tasks', JSON.stringify(updatedTasks));
+    }
+  };
+
+  const toggleTaskStatus = (id: string) => {
+    const updatedTasks = dailyTasks.map(task => 
+      task.id === id ? { ...task, completed: !task.completed } : task
+    );
+    setDailyTasks(updatedTasks);
+    localStorage.setItem('joseph_fit_daily_tasks', JSON.stringify(updatedTasks));
+  };
+
+  const removeTask = (id: string) => {
+    const updatedTasks = dailyTasks.filter(task => task.id !== id);
+    setDailyTasks(updatedTasks);
+    localStorage.setItem('joseph_fit_daily_tasks', JSON.stringify(updatedTasks));
+  };
+
+  const saveToPhone = async () => {
+    const dateStr = format(startOfToday(), "EEEE, d 'de' MMMM", { locale: es });
+    let content = `📅 Joseph-FIT: Pendientes de Hoy (${dateStr})\n\n`;
+    
+    content += `🥗 DIETA: ${selectedDiet.name}\n`;
+    content += `- Desayuno: ${selectedDiet.meals.breakfast}\n`;
+    content += `- Almuerzo: ${selectedDiet.meals.lunch}\n`;
+    content += `- Cena: ${selectedDiet.meals.dinner}\n`;
+    content += `- Snack: ${selectedDiet.meals.snack}\n\n`;
+    
+    content += `💪 EJERCICIO: ${EXERCISES[0].name}\n\n`;
+    
+    if (dailyTasks.length > 0) {
+      content += `📝 TAREAS PENDIENTES:\n`;
+      dailyTasks.forEach(task => {
+        content += `${task.completed ? '[✓]' : '[ ]'} ${task.text}\n`;
+      });
+    }
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Mis Pendientes Joseph-FIT',
+          text: content,
+        });
+      } catch (err) {
+        console.error('Error sharing:', err);
+      }
+    } else {
+      // Fallback: Download as file
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Joseph-FIT-Pendientes-${format(new Date(), 'yyyy-MM-dd')}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  };
 
   const searchGlobalFood = async (query: string) => {
     if (!query.trim()) {
@@ -495,6 +574,83 @@ export default function App() {
                       "Marcar como completado"
                     )}
                   </button>
+                </div>
+              </section>
+
+              <section>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <ClipboardList className="text-blue-600 w-5 h-5" />
+                    <h2 className="text-xl font-semibold text-slate-900">Pendientes del Día</h2>
+                  </div>
+                  <button 
+                    onClick={saveToPhone}
+                    className="flex items-center gap-2 text-xs font-bold text-blue-600 bg-blue-50 px-4 py-2 rounded-full hover:bg-blue-100 transition-all"
+                  >
+                    <Smartphone className="w-4 h-4" />
+                    Guardar en Celular
+                  </button>
+                </div>
+                
+                <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 space-y-6">
+                  <form onSubmit={handleAddTask} className="flex gap-2">
+                    <input 
+                      type="text" 
+                      value={newTaskText}
+                      onChange={(e) => setNewTaskText(e.target.value)}
+                      placeholder="Ej. Comprar proteínas..."
+                      className="flex-1 px-4 py-3 bg-slate-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-xl outline-none transition-all text-sm font-medium"
+                    />
+                    <button 
+                      type="submit"
+                      disabled={!newTaskText.trim()}
+                      className="p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all"
+                    >
+                      <Plus className="w-5 h-5" />
+                    </button>
+                  </form>
+
+                  <div className="space-y-3">
+                    {dailyTasks.length === 0 ? (
+                      <div className="text-center py-8">
+                        <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <ClipboardList className="text-slate-300 w-6 h-6" />
+                        </div>
+                        <p className="text-sm text-slate-400">No tienes pendientes para hoy</p>
+                      </div>
+                    ) : (
+                      dailyTasks.map((task) => (
+                        <div 
+                          key={task.id}
+                          className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl group transition-all hover:bg-slate-100"
+                        >
+                          <div className="flex items-center gap-3">
+                            <button 
+                              onClick={() => toggleTaskStatus(task.id)}
+                              className={cn(
+                                "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+                                task.completed ? "bg-green-500 border-green-500" : "border-slate-300"
+                              )}
+                            >
+                              {task.completed && <Check className="text-white w-4 h-4" />}
+                            </button>
+                            <span className={cn(
+                              "text-sm font-medium transition-all",
+                              task.completed ? "text-slate-400 line-through" : "text-slate-700"
+                            )}>
+                              {task.text}
+                            </span>
+                          </div>
+                          <button 
+                            onClick={() => removeTask(task.id)}
+                            className="p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </section>
 
