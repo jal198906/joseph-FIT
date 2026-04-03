@@ -1,8 +1,7 @@
 {
   "name": "Joseph-FIT",
-  "description": "Tu asistente personal de fitness para dietas personalizadas, ejercicios diarios y recordatorios de salud.",
+  "description": "Tu planificador personal de salud y nutrición con IA.",
   "requestFramePermissions": [
-    "notifications",
     "camera"
   ]
 }

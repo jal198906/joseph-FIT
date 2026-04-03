@@ -37,8 +37,10 @@ import { DIETS, EXERCISES, type Diet, type Exercise, type DailyPlan, type Challe
 import { FOOD_DATABASE, type FoodInfo } from './data/foods';
 import { cn } from './lib/utils';
 import { GoogleGenAI } from "@google/genai";
+import LandingPage from './components/LandingPage';
 
 export default function App() {
+  const [showLanding, setShowLanding] = useState(true);
   const [activeTab, setActiveTab] = useState<'today' | 'diets' | 'exercises' | 'fruits'>('today');
   const [selectedDiet, setSelectedDiet] = useState<Diet>(DIETS[0]);
   const [dailyPlans, setDailyPlans] = useState<DailyPlan[]>([]);
@@ -102,6 +104,7 @@ export default function App() {
     const savedName = localStorage.getItem('joseph_fit_name');
     if (savedName) {
       setUserName(savedName);
+      setShowLanding(false);
     }
 
     const savedPlans = localStorage.getItem('joseph_fit_plans');
@@ -440,6 +443,10 @@ export default function App() {
     localStorage.setItem('joseph_fit_challenges', JSON.stringify(updatedChallenges));
   };
 
+  if (showLanding) {
+    return <LandingPage onStart={() => setShowLanding(false)} />;
+  }
+
   if (!userName) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
@@ -486,9 +493,13 @@ export default function App() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="bg-blue-600 p-2 rounded-xl">
+          <button 
+            onClick={() => setShowLanding(true)}
+            className="bg-blue-600 p-2 rounded-xl hover:bg-blue-700 transition-colors"
+            title="Ir al inicio"
+          >
             <Flame className="text-white w-6 h-6" />
-          </div>
+          </button>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
             Joseph-<span className="text-blue-600">FIT</span>
           </h1>
