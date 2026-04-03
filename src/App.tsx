@@ -21,7 +21,10 @@ import {
   Loader2,
   Camera,
   X,
-  Upload
+  Upload,
+  Play,
+  Pause,
+  RotateCcw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, addDays, startOfToday, isSameDay } from 'date-fns';
@@ -50,6 +53,10 @@ export default function App() {
   const [foodSearch, setFoodSearch] = useState('');
   const [apiFoods, setApiFoods] = useState<any[]>([]);
   const [isSearchingApi, setIsSearchingApi] = useState(false);
+
+  // Stopwatch state
+  const [stopwatchTime, setStopwatchTime] = useState(0);
+  const [isStopwatchRunning, setIsStopwatchRunning] = useState(false);
 
   const normalizeString = (str: string) => {
     return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -92,6 +99,23 @@ export default function App() {
       setExtraChallenges(JSON.parse(savedChallenges));
     }
   }, []);
+
+  // Stopwatch effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isStopwatchRunning) {
+      interval = setInterval(() => {
+        setStopwatchTime(prevTime => prevTime + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isStopwatchRunning]);
+
+  const formatStopwatchTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const handleSaveName = (e: React.FormEvent) => {
     e.preventDefault();
@@ -558,6 +582,45 @@ export default function App() {
               className="space-y-6"
             >
               <h2 className="text-2xl font-bold text-slate-900">Ejercicios Diarios</h2>
+
+              {/* Stopwatch Section */}
+              <div className="bg-slate-900 rounded-[2rem] p-6 text-white shadow-xl relative overflow-hidden">
+                <div className="relative z-10 flex flex-col items-center">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Timer className="w-4 h-4 text-blue-400" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Cronómetro de Joseph-FIT</span>
+                  </div>
+                  <div className="text-5xl font-mono font-bold mb-6 tracking-wider">
+                    {formatStopwatchTime(stopwatchTime)}
+                  </div>
+                  <div className="flex gap-4">
+                    <button 
+                      onClick={() => setIsStopwatchRunning(!isStopwatchRunning)}
+                      className={cn(
+                        "w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg",
+                        isStopwatchRunning 
+                          ? "bg-orange-500 hover:bg-orange-600 shadow-orange-900/20" 
+                          : "bg-blue-600 hover:bg-blue-700 shadow-blue-900/20"
+                      )}
+                    >
+                      {isStopwatchRunning ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-1" />}
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setIsStopwatchRunning(false);
+                        setStopwatchTime(0);
+                      }}
+                      className="w-14 h-14 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center transition-all shadow-lg shadow-black/20"
+                    >
+                      <RotateCcw className="w-6 h-6" />
+                    </button>
+                  </div>
+                </div>
+                <div className="absolute top-0 right-0 p-8 opacity-10">
+                  <Timer className="w-32 h-32" />
+                </div>
+              </div>
+
               <div className="grid gap-4">
                 {EXERCISES.map((ex) => (
                   <div key={ex.id} className="bg-white p-6 rounded-3xl border border-slate-100 flex items-start gap-4">
