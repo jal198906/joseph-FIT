@@ -257,4 +257,46 @@ export const FOOD_DATABASE: FoodInfo[] = [
   { name: "Semillas de Calabaza", calories: 559, unit: "100g", category: "Grano", benefits: "Gran fuente de zinc y magnesio." },
   { name: "Cebada", calories: 354, unit: "100g", category: "Grano", benefits: "Buena para el colesterol y fibra." },
   { name: "Mijo", calories: 378, unit: "100g", category: "Grano", benefits: "Cereal sin gluten muy nutritivo." },
+
+  // --- NUEVAS ADICIONES ---
+  { name: "Burrita Hondureña", calories: 380, unit: "1 unidad", category: "Hondureño", benefits: "Tortilla de maíz con frijoles, huevo, queso y carne." },
+  { name: "Carne de Cerdo (Referencia)", calories: 242, unit: "100g", category: "Carne", benefits: "Referencia general para carne de cerdo magra." },
+  { name: "Panqueques (Pancakes)", calories: 227, unit: "100g", category: "Pan", benefits: "Clásico desayuno energético." },
+  { name: "Coco (Pulpa)", calories: 354, unit: "100g", category: "Fruta", benefits: "Rico en grasas saludables y fibra." },
+  { name: "Agua de Coco", calories: 19, unit: "100ml", category: "Bebida", benefits: "Hidratación natural y electrolitos." },
+
+  // --- BEBIDAS ---
+  { name: "Coca Cola", calories: 42, unit: "100ml", category: "Bebida", benefits: "Refresco carbonatado clásico." },
+  { name: "Pepsi", calories: 41, unit: "100ml", category: "Bebida", benefits: "Refresco de cola tradicional." },
+  { name: "Cerveza Clara", calories: 43, unit: "100ml", category: "Bebida", benefits: "Bebida fermentada de cebada." },
+  { name: "Cerveza Oscura", calories: 50, unit: "100ml", category: "Bebida", benefits: "Sabor más intenso y mayor cuerpo." },
+  { name: "Vino Tinto", calories: 85, unit: "100ml", category: "Bebida", benefits: "Rico en polifenoles y antioxidantes." },
+  { name: "Vino Blanco", calories: 82, unit: "100ml", category: "Bebida", benefits: "Ligero y refrescante." },
+  { name: "Vino Rosado", calories: 83, unit: "100ml", category: "Bebida", benefits: "Equilibrio entre tinto y blanco." },
+  { name: "Vino Espumoso (Cava/Champagne)", calories: 75, unit: "100ml", category: "Bebida", benefits: "Burbujas para celebraciones." },
+
+  // --- CAFÉ Y BEBIDAS CALIENTES ---
+  { name: "Café Negro (Espresso)", calories: 2, unit: "1 taza", category: "Bebida", benefits: "Energía pura y antioxidantes." },
+  { name: "Café Americano", calories: 5, unit: "1 taza", category: "Bebida", benefits: "Bajo en calorías, estimulante." },
+  { name: "Capuchino", calories: 120, unit: "1 taza", category: "Bebida", benefits: "Equilibrio de café y leche espumosa." },
+  { name: "Café Latte", calories: 150, unit: "1 taza", category: "Bebida", benefits: "Suave y cremoso." },
+  { name: "Café Mocha", calories: 230, unit: "1 taza", category: "Bebida", benefits: "Combinación de café y chocolate." },
+  { name: "Caramel Macchiato", calories: 250, unit: "1 taza", category: "Bebida", benefits: "Dulce con toque de caramelo." },
+  { name: "Café con Leche", calories: 90, unit: "1 taza", category: "Bebida", benefits: "Clásico desayuno reconfortante." },
+  { name: "Chocolate Caliente", calories: 190, unit: "1 taza", category: "Bebida", benefits: "Reconfortante y energético." },
+  { name: "Té Verde", calories: 2, unit: "1 taza", category: "Bebida", benefits: "Rico en antioxidantes y catequinas." },
+
+  // --- POSTRES Y REPOSTERÍA ---
+  { name: "Cheesecake (Pastel de Queso)", calories: 321, unit: "100g", category: "Postre", benefits: "Rico en calcio y energía." },
+  { name: "Tiramisú", calories: 284, unit: "100g", category: "Postre", benefits: "Clásico italiano con café." },
+  { name: "Brownie de Chocolate", calories: 466, unit: "100g", category: "Postre", benefits: "Energía intensa de chocolate." },
+  { name: "Helado de Vainilla", calories: 207, unit: "100g", category: "Postre", benefits: "Refrescante y cremoso." },
+  { name: "Flan de Leche", calories: 145, unit: "100g", category: "Postre", benefits: "Textura suave y dulce." },
+  { name: "Arroz con Leche", calories: 111, unit: "100g", category: "Postre", benefits: "Tradicional y reconfortante." },
+  { name: "Pastel de Chocolate", calories: 371, unit: "100g", category: "Postre", benefits: "El favorito de las celebraciones." },
+  { name: "Pie de Limón", calories: 280, unit: "100g", category: "Postre", benefits: "Equilibrio entre ácido y dulce." },
+  { name: "Galletas de Chispas de Chocolate", calories: 488, unit: "100g", category: "Postre", benefits: "Bocadillo dulce clásico." },
+  { name: "Pastel de Tres Leches", calories: 320, unit: "100g", category: "Postre", benefits: "Húmedo y muy dulce." },
+  { name: "Mousse de Chocolate", calories: 225, unit: "100g", category: "Postre", benefits: "Ligero y aireado." },
+  { name: "Gelatina de Frutas", calories: 62, unit: "100g", category: "Postre", benefits: "Baja en calorías y refrescante." },
 ];
