@@ -21,6 +21,14 @@ export interface Exercise {
   description: string;
 }
 
+export interface Challenge {
+  id: string;
+  name: string;
+  instructions: string;
+  duration: string;
+  createdAt: string;
+}
+
 export interface DailyPlan {
   date: string;
   dietId: string;

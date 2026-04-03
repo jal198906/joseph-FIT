@@ -26,7 +26,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { format, addDays, startOfToday, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { DIETS, EXERCISES, type Diet, type Exercise, type DailyPlan } from './types';
+import { DIETS, EXERCISES, type Diet, type Exercise, type DailyPlan, type Challenge } from './types';
 import { FOOD_DATABASE, type FoodInfo } from './data/foods';
 import { cn } from './lib/utils';
 import { GoogleGenAI } from "@google/genai";
@@ -35,9 +35,16 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'today' | 'diets' | 'exercises' | 'fruits'>('today');
   const [selectedDiet, setSelectedDiet] = useState<Diet>(DIETS[0]);
   const [dailyPlans, setDailyPlans] = useState<DailyPlan[]>([]);
+  const [extraChallenges, setExtraChallenges] = useState<Challenge[]>([]);
   const [showReminderModal, setShowReminderModal] = useState(false);
+  const [showChallengeModal, setShowChallengeModal] = useState(false);
   const [userName, setUserName] = useState<string | null>(null);
   const [tempName, setTempName] = useState('');
+  
+  // New Challenge Form State
+  const [challengeName, setChallengeName] = useState('');
+  const [challengeInstructions, setChallengeInstructions] = useState('');
+  const [challengeTime, setChallengeTime] = useState('');
   
   // Food Library state
   const [foodSearch, setFoodSearch] = useState('');
@@ -78,6 +85,11 @@ export default function App() {
       }));
       setDailyPlans(initialPlans);
       localStorage.setItem('joseph_fit_plans', JSON.stringify(initialPlans));
+    }
+
+    const savedChallenges = localStorage.getItem('joseph_fit_challenges');
+    if (savedChallenges) {
+      setExtraChallenges(JSON.parse(savedChallenges));
     }
   }, []);
 
@@ -167,35 +179,111 @@ export default function App() {
     setScanResult(null);
 
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = async () => {
-        const base64Data = (reader.result as string).split(',')[1];
-        
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-        const response = await ai.models.generateContent({
-          model: "gemini-3-flash-preview",
-          contents: [
-            {
-              parts: [
-                { text: "Analiza esta imagen de comida. Identifica el plato o alimento, estima las calorías por porción estándar y menciona 2 beneficios nutricionales. Responde en formato JSON: { \"name\": \"Nombre\", \"calories\": 0, \"benefits\": \"Beneficio 1, Beneficio 2\" }" },
-                { inlineData: { data: base64Data, mimeType: file.type } }
-              ]
-            }
-          ],
-          config: {
-            responseMimeType: "application/json"
-          }
-        });
+      // Compress and resize image before sending to AI
+      const compressImage = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target?.result as string;
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const MAX_WIDTH = 800;
+              const MAX_HEIGHT = 800;
+              let width = img.width;
+              let height = img.height;
 
-        const result = JSON.parse(response.text || "{}");
-        setScanResult(result);
-        setIsAnalyzing(false);
+              if (width > height) {
+                if (width > MAX_WIDTH) {
+                  height *= MAX_WIDTH / width;
+                  width = MAX_WIDTH;
+                }
+              } else {
+                if (height > MAX_HEIGHT) {
+                  width *= MAX_HEIGHT / height;
+                  height = MAX_HEIGHT;
+                }
+              }
+
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx?.drawImage(img, 0, 0, width, height);
+              
+              // Get base64 string with lower quality to reduce payload size
+              const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+              resolve(dataUrl.split(',')[1]);
+            };
+            img.onerror = reject;
+          };
+          reader.onerror = reject;
+        });
       };
+
+      const base64Data = await compressImage(file);
+      
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error("API Key de Gemini no configurada");
+      }
+
+      const ai = new GoogleGenAI({ apiKey });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview", 
+        contents: [
+          {
+            parts: [
+              { text: "Analiza esta imagen de comida. Identifica el plato o alimento, estima las calorías por porción estándar y menciona 2 beneficios nutricionales. Responde estrictamente en formato JSON: { \"name\": \"Nombre\", \"calories\": 0, \"benefits\": \"Beneficio 1, Beneficio 2\" }" },
+              { inlineData: { data: base64Data, mimeType: "image/jpeg" } }
+            ]
+          }
+        ],
+        config: {
+          responseMimeType: "application/json"
+        }
+      });
+
+      const text = response.text;
+      if (!text) throw new Error("No se recibió respuesta de la IA");
+      
+      const result = JSON.parse(text);
+      setScanResult(result);
     } catch (error) {
       console.error("Error analyzing image:", error);
+      alert("Hubo un problema al analizar la imagen. Por favor, intenta de nuevo con una imagen más clara.");
+    } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  const handleAddChallenge = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!challengeName.trim() || !challengeInstructions.trim() || !challengeTime.trim()) return;
+
+    const newChallenge: Challenge = {
+      id: `challenge-${Date.now()}`,
+      name: challengeName.trim(),
+      instructions: challengeInstructions.trim(),
+      duration: challengeTime.trim(),
+      createdAt: new Date().toISOString()
+    };
+
+    const updatedChallenges = [newChallenge, ...extraChallenges];
+    setExtraChallenges(updatedChallenges);
+    localStorage.setItem('joseph_fit_challenges', JSON.stringify(updatedChallenges));
+    
+    // Reset form
+    setChallengeName('');
+    setChallengeInstructions('');
+    setChallengeTime('');
+    setShowChallengeModal(false);
+  };
+
+  const removeChallenge = (id: string) => {
+    const updatedChallenges = extraChallenges.filter(c => c.id !== id);
+    setExtraChallenges(updatedChallenges);
+    localStorage.setItem('joseph_fit_challenges', JSON.stringify(updatedChallenges));
   };
 
   if (!userName) {
@@ -506,13 +594,53 @@ export default function App() {
               <div className="bg-blue-600 rounded-3xl p-6 text-white overflow-hidden relative">
                 <div className="relative z-10">
                   <h3 className="text-lg font-bold mb-2">¿Quieres un reto extra?</h3>
-                  <p className="text-blue-100 text-sm mb-4">Añade 15 minutos de estiramientos al final de tu rutina.</p>
-                  <button className="bg-white text-blue-600 px-6 py-2 rounded-xl font-bold text-sm hover:bg-blue-50 transition-colors">
-                    Añadir al plan
+                  <p className="text-blue-100 text-sm mb-4">Crea tus propios retos personalizados para complementar tu rutina.</p>
+                  <button 
+                    onClick={() => setShowChallengeModal(true)}
+                    className="bg-white text-blue-600 px-6 py-2 rounded-xl font-bold text-sm hover:bg-blue-50 transition-colors"
+                  >
+                    Crear Reto Extra
                   </button>
                 </div>
                 <Flame className="absolute -bottom-4 -right-4 w-32 h-32 text-blue-500/20" />
               </div>
+
+              {extraChallenges.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-bold text-slate-900">Mis Retos Extras</h3>
+                  <div className="grid gap-4">
+                    {extraChallenges.map((challenge) => (
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        key={challenge.id} 
+                        className="bg-white p-6 rounded-3xl border border-blue-100 shadow-sm relative group"
+                      >
+                        <button 
+                          onClick={() => removeChallenge(challenge.id)}
+                          className="absolute top-4 right-4 p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                        <div className="flex items-start gap-4">
+                          <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+                            <Flame className="w-6 h-6" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <h4 className="font-bold text-slate-900">{challenge.name}</h4>
+                              <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">
+                                {challenge.duration}
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-600 italic">"{challenge.instructions}"</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
           {activeTab === 'fruits' && (
@@ -813,6 +941,89 @@ export default function App() {
                     </button>
                   </motion.div>
                 )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Challenge Modal */}
+      <AnimatePresence>
+        {showChallengeModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowChallengeModal(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 relative z-10 shadow-2xl"
+            >
+              <button 
+                onClick={() => setShowChallengeModal(false)}
+                className="absolute top-6 right-6 p-2 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6 text-slate-400" />
+              </button>
+
+              <div className="space-y-6">
+                <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto rotate-3 shadow-lg shadow-blue-200">
+                  <Plus className="text-white w-8 h-8" />
+                </div>
+                
+                <div className="text-center">
+                  <h3 className="text-2xl font-bold text-slate-900">Nuevo Reto Extra</h3>
+                  <p className="text-slate-500 text-sm mt-1">Personaliza tu entrenamiento</p>
+                </div>
+
+                <form onSubmit={handleAddChallenge} className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Nombre del Reto</label>
+                    <input 
+                      type="text" 
+                      value={challengeName}
+                      onChange={(e) => setChallengeName(e.target.value)}
+                      placeholder="Ej. Plancha Extrema"
+                      className="w-full px-5 py-3 bg-slate-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-xl outline-none transition-all text-sm font-medium"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Indicaciones</label>
+                    <textarea 
+                      value={challengeInstructions}
+                      onChange={(e) => setChallengeInstructions(e.target.value)}
+                      placeholder="Ej. Mantén la posición de plancha por el tiempo indicado."
+                      className="w-full px-5 py-3 bg-slate-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-xl outline-none transition-all text-sm font-medium min-h-[80px] resize-none"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Tiempo / Duración</label>
+                    <input 
+                      type="text" 
+                      value={challengeTime}
+                      onChange={(e) => setChallengeTime(e.target.value)}
+                      placeholder="Ej. 2 minutos"
+                      className="w-full px-5 py-3 bg-slate-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-xl outline-none transition-all text-sm font-medium"
+                      required
+                    />
+                  </div>
+
+                  <button 
+                    type="submit"
+                    className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all mt-4"
+                  >
+                    Guardar Reto
+                  </button>
+                </form>
               </div>
             </motion.div>
           </div>
