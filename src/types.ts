@@ -75,6 +75,19 @@ export const DIETS: Diet[] = [
       dinner: 'Lentejas guisadas con verduras y cúrcuma',
       snack: 'Fruta de temporada'
     }
+  },
+  {
+    id: 'weight-loss-1',
+    name: 'Dieta para bajar de peso',
+    type: 'weight-loss',
+    description: 'Enfocada en el déficit calórico controlado con alimentos saciantes y nutritivos.',
+    benefits: ['Reducción de grasa corporal', 'Control del apetito', 'Aumento de vitalidad'],
+    meals: {
+      breakfast: 'Claras de huevo con espinacas y una rebanada de pan integral',
+      lunch: 'Ensalada de atún al natural con abundantes vegetales verdes y vinagreta de limón',
+      dinner: 'Pechuga de pavo a la plancha con calabacines al vapor',
+      snack: 'Una manzana verde o una taza de fresas'
+    }
   }
 ];
 

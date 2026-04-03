@@ -54,6 +54,22 @@ export default function App() {
   const [apiFoods, setApiFoods] = useState<any[]>([]);
   const [isSearchingApi, setIsSearchingApi] = useState(false);
 
+  // Custom Diets state
+  const [customDiets, setCustomDiets] = useState<Diet[]>([]);
+  const [showDietModal, setShowDietModal] = useState(false);
+  const [newDiet, setNewDiet] = useState<Partial<Diet>>({
+    name: '',
+    description: '',
+    type: 'balanced',
+    benefits: [],
+    meals: {
+      breakfast: '',
+      lunch: '',
+      dinner: '',
+      snack: ''
+    }
+  });
+
   // Stopwatch state
   const [stopwatchTime, setStopwatchTime] = useState(0);
   const [isStopwatchRunning, setIsStopwatchRunning] = useState(false);
@@ -98,6 +114,11 @@ export default function App() {
     if (savedChallenges) {
       setExtraChallenges(JSON.parse(savedChallenges));
     }
+
+    const savedCustomDiets = localStorage.getItem('joseph_fit_custom_diets');
+    if (savedCustomDiets) {
+      setCustomDiets(JSON.parse(savedCustomDiets));
+    }
   }, []);
 
   // Stopwatch effect
@@ -125,6 +146,35 @@ export default function App() {
       localStorage.setItem('joseph_fit_name', tempName.trim());
     }
   };
+
+  const handleAddDiet = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newDiet.name && newDiet.description) {
+      const dietToAdd: Diet = {
+        ...newDiet as Diet,
+        id: `custom-${Date.now()}`,
+        benefits: newDiet.benefits?.length ? newDiet.benefits : ['Personalizada']
+      };
+      const updatedDiets = [...customDiets, dietToAdd];
+      setCustomDiets(updatedDiets);
+      localStorage.setItem('joseph_fit_custom_diets', JSON.stringify(updatedDiets));
+      setShowDietModal(false);
+      setNewDiet({
+        name: '',
+        description: '',
+        type: 'balanced',
+        benefits: [],
+        meals: {
+          breakfast: '',
+          lunch: '',
+          dinner: '',
+          snack: ''
+        }
+      });
+    }
+  };
+
+  const allDiets = [...DIETS, ...customDiets];
 
   const searchGlobalFood = async (query: string) => {
     if (!query.trim()) {
@@ -488,14 +538,23 @@ export default function App() {
             >
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-slate-900">Sugerencias de Dieta</h2>
-                <button 
-                  onClick={fetchRandomRecipe}
-                  disabled={isLoadingRecipe}
-                  className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors disabled:opacity-50"
-                  title="Obtener receta aleatoria"
-                >
-                  {isLoadingRecipe ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setShowDietModal(true)}
+                    className="p-2 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition-colors"
+                    title="Agregar dieta personalizada"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                  <button 
+                    onClick={fetchRandomRecipe}
+                    disabled={isLoadingRecipe}
+                    className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors disabled:opacity-50"
+                    title="Obtener receta aleatoria"
+                  >
+                    {isLoadingRecipe ? <Loader2 className="w-5 h-5 animate-spin" /> : <Utensils className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
 
               {randomRecipe && (
@@ -529,7 +588,7 @@ export default function App() {
               )}
 
               <div className="grid gap-6">
-                {DIETS.map((diet) => (
+                {allDiets.map((diet) => (
                   <div 
                     key={diet.id}
                     className={cn(
@@ -1005,6 +1064,143 @@ export default function App() {
                     </button>
                   </motion.div>
                 )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Diet Modal */}
+      <AnimatePresence>
+        {showDietModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 overflow-y-auto">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowDietModal(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white w-full max-w-md rounded-[2.5rem] p-8 relative z-10 shadow-2xl my-auto"
+            >
+              <button 
+                onClick={() => setShowDietModal(false)}
+                className="absolute top-6 right-6 p-2 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6 text-slate-400" />
+              </button>
+
+              <div className="space-y-6">
+                <div className="w-16 h-16 bg-green-600 rounded-2xl flex items-center justify-center mx-auto rotate-3 shadow-lg shadow-green-200">
+                  <Utensils className="text-white w-8 h-8" />
+                </div>
+                
+                <div className="text-center">
+                  <h3 className="text-2xl font-bold text-slate-900">Nueva Dieta Personalizada</h3>
+                  <p className="text-slate-500 text-sm mt-1">Define tu propio plan alimenticio</p>
+                </div>
+
+                <form onSubmit={handleAddDiet} className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Nombre de la Dieta</label>
+                    <input 
+                      type="text" 
+                      value={newDiet.name}
+                      onChange={(e) => setNewDiet({...newDiet, name: e.target.value})}
+                      placeholder="Ej. Mi Dieta Proteica"
+                      className="w-full px-5 py-3 bg-slate-50 border-2 border-transparent focus:border-green-600 focus:bg-white rounded-xl outline-none transition-all text-sm font-medium"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Descripción</label>
+                    <input 
+                      type="text" 
+                      value={newDiet.description}
+                      onChange={(e) => setNewDiet({...newDiet, description: e.target.value})}
+                      placeholder="Ej. Dieta alta en proteínas para ganar músculo."
+                      className="w-full px-5 py-3 bg-slate-50 border-2 border-transparent focus:border-green-600 focus:bg-white rounded-xl outline-none transition-all text-sm font-medium"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Tipo</label>
+                      <select 
+                        value={newDiet.type}
+                        onChange={(e) => setNewDiet({...newDiet, type: e.target.value as any})}
+                        className="w-full px-5 py-3 bg-slate-50 border-2 border-transparent focus:border-green-600 focus:bg-white rounded-xl outline-none transition-all text-sm font-medium appearance-none cursor-pointer"
+                      >
+                        <option value="balanced">Equilibrada</option>
+                        <option value="weight-loss">Bajar Peso</option>
+                        <option value="muscle-gain">Ganar Músculo</option>
+                        <option value="keto">Keto</option>
+                        <option value="vegan">Vegana</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Desayuno</label>
+                      <input 
+                        type="text" 
+                        value={newDiet.meals?.breakfast}
+                        onChange={(e) => setNewDiet({...newDiet, meals: {...newDiet.meals!, breakfast: e.target.value}})}
+                        placeholder="Ej. Huevos"
+                        className="w-full px-5 py-3 bg-slate-50 border-2 border-transparent focus:border-green-600 focus:bg-white rounded-xl outline-none transition-all text-sm font-medium"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Almuerzo</label>
+                      <input 
+                        type="text" 
+                        value={newDiet.meals?.lunch}
+                        onChange={(e) => setNewDiet({...newDiet, meals: {...newDiet.meals!, lunch: e.target.value}})}
+                        placeholder="Ej. Pollo"
+                        className="w-full px-5 py-3 bg-slate-50 border-2 border-transparent focus:border-green-600 focus:bg-white rounded-xl outline-none transition-all text-sm font-medium"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Cena</label>
+                      <input 
+                        type="text" 
+                        value={newDiet.meals?.dinner}
+                        onChange={(e) => setNewDiet({...newDiet, meals: {...newDiet.meals!, dinner: e.target.value}})}
+                        placeholder="Ej. Pescado"
+                        className="w-full px-5 py-3 bg-slate-50 border-2 border-transparent focus:border-green-600 focus:bg-white rounded-xl outline-none transition-all text-sm font-medium"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Snack</label>
+                    <input 
+                      type="text" 
+                      value={newDiet.meals?.snack}
+                      onChange={(e) => setNewDiet({...newDiet, meals: {...newDiet.meals!, snack: e.target.value}})}
+                      placeholder="Ej. Fruta"
+                      className="w-full px-5 py-3 bg-slate-50 border-2 border-transparent focus:border-green-600 focus:bg-white rounded-xl outline-none transition-all text-sm font-medium"
+                      required
+                    />
+                  </div>
+
+                  <button 
+                    type="submit"
+                    className="w-full py-4 bg-green-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-green-200 hover:bg-green-700 transition-all mt-4"
+                  >
+                    Guardar Dieta
+                  </button>
+                </form>
               </div>
             </motion.div>
           </div>
