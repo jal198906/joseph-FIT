@@ -20,7 +20,8 @@ import {
   Scan,
   Loader2,
   Camera,
-  X
+  X,
+  Upload
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, addDays, startOfToday, isSameDay } from 'date-fns';
@@ -55,6 +56,9 @@ export default function App() {
   const [showScanner, setShowScanner] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [scanResult, setScanResult] = useState<any>(null);
+
+  const cameraInputRef = React.useRef<HTMLInputElement>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const savedName = localStorage.getItem('joseph_fit_name');
@@ -530,15 +534,48 @@ export default function App() {
                   placeholder="Busca un alimento (ej. Baleada, Pollo chuco, Frijoles...)"
                   value={foodSearch}
                   onChange={(e) => setFoodSearch(e.target.value)}
-                  className="w-full px-6 py-5 bg-white border border-slate-200 rounded-[2rem] outline-none focus:border-blue-600 transition-all shadow-lg shadow-slate-100 text-lg"
+                  className="w-full pl-6 pr-32 py-5 bg-white border border-slate-200 rounded-[2rem] outline-none focus:border-blue-600 transition-all shadow-lg shadow-slate-100 text-lg"
                 />
-                <button 
-                  onClick={() => setShowScanner(true)}
-                  className="absolute right-6 top-5 text-blue-600 w-6 h-6 hover:scale-110 transition-transform"
-                >
-                  <Scan />
-                </button>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-2">
+                  <button 
+                    onClick={() => {
+                      setShowScanner(true);
+                      setTimeout(() => cameraInputRef.current?.click(), 100);
+                    }}
+                    className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center hover:bg-blue-700 transition-all shadow-md shadow-blue-100"
+                    title="Escanear con cámara"
+                  >
+                    <Scan className="w-5 h-5" />
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setShowScanner(true);
+                      setTimeout(() => fileInputRef.current?.click(), 100);
+                    }}
+                    className="w-12 h-12 bg-slate-100 text-slate-600 rounded-full flex items-center justify-center hover:bg-slate-200 transition-all"
+                    title="Subir imagen"
+                  >
+                    <Upload className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
+
+              {/* Hidden Inputs */}
+              <input 
+                type="file" 
+                accept="image/*" 
+                capture="environment"
+                ref={cameraInputRef}
+                onChange={handleScanImage}
+                className="hidden"
+              />
+              <input 
+                type="file" 
+                accept="image/*" 
+                ref={fileInputRef}
+                onChange={handleScanImage}
+                className="hidden"
+              />
 
               <div className="grid gap-4">
                 {foodSearch.trim() !== '' ? (
@@ -724,16 +761,22 @@ export default function App() {
                 </div>
 
                 {!scanResult && !isAnalyzing && (
-                  <label className="block w-full py-5 bg-blue-600 text-white rounded-2xl font-bold text-lg shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all cursor-pointer text-center">
-                    Capturar o Subir Foto
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      capture="environment"
-                      onChange={handleScanImage}
-                      className="hidden"
-                    />
-                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button 
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="py-5 bg-blue-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all flex flex-col items-center gap-2"
+                    >
+                      <Camera className="w-6 h-6" />
+                      Cámara
+                    </button>
+                    <button 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="py-5 bg-slate-800 text-white rounded-2xl font-bold text-sm shadow-lg shadow-slate-200 hover:bg-slate-900 transition-all flex flex-col items-center gap-2"
+                    >
+                      <Upload className="w-6 h-6" />
+                      Galería
+                    </button>
+                  </div>
                 )}
 
                 {isAnalyzing && (
