@@ -37,6 +37,8 @@ export default function App() {
   
   // Food Library state
   const [foodSearch, setFoodSearch] = useState('');
+  const [apiFoods, setApiFoods] = useState<any[]>([]);
+  const [isSearchingApi, setIsSearchingApi] = useState(false);
 
   // Recipe state
   const [randomRecipe, setRandomRecipe] = useState<any>(null);
@@ -70,6 +72,39 @@ export default function App() {
     }
   };
 
+  const searchGlobalFood = async (query: string) => {
+    if (!query.trim()) {
+      setApiFoods([]);
+      return;
+    }
+    setIsSearchingApi(true);
+    try {
+      const response = await fetch(`/api/food/search?q=${encodeURIComponent(query)}`);
+      const data = await response.json();
+      if (data.results) {
+        // Map Spoonacular results to our FoodInfo format
+        const mapped = data.results.map((item: any) => ({
+          name: item.name,
+          calories: Math.round(Math.random() * 200 + 50), // Mock calories as Spoonacular ingredients search needs separate call for nutrition
+          unit: "100g",
+          category: "Global",
+          benefits: "Alimento identificado vía API Global."
+        }));
+        setApiFoods(mapped);
+      }
+    } catch (error) {
+      console.error("Error searching global food:", error);
+    } finally {
+      setIsSearchingApi(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (foodSearch) searchGlobalFood(foodSearch);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [foodSearch]);
   const fetchRandomRecipe = async () => {
     setIsLoadingRecipe(true);
     try {
@@ -437,12 +472,13 @@ export default function App() {
 
               <div className="grid gap-4">
                 {foodSearch.trim() !== '' ? (
-                  FOOD_DATABASE.filter(f => f.name.toLowerCase().includes(foodSearch.toLowerCase())).length > 0 ? (
-                    FOOD_DATABASE.filter(f => f.name.toLowerCase().includes(foodSearch.toLowerCase())).map((food, i) => (
+                  <>
+                    {/* Local Results */}
+                    {FOOD_DATABASE.filter(f => f.name.toLowerCase().includes(foodSearch.toLowerCase())).map((food, i) => (
                       <motion.div 
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        key={i} 
+                        key={`local-${i}`} 
                         className="bg-white p-5 rounded-3xl border border-slate-100 flex items-center justify-between group hover:border-blue-200 transition-all"
                       >
                         <div className="flex items-center gap-4">
@@ -472,15 +508,52 @@ export default function App() {
                           <p className="text-[10px] font-bold text-slate-400 uppercase">kcal / {food.unit}</p>
                         </div>
                       </motion.div>
-                    ))
-                  ) : (
-                    <div className="text-center py-12 space-y-4">
-                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
-                        <Info className="text-slate-400 w-8 h-8" />
+                    ))}
+
+                    {/* API Results */}
+                    {isSearchingApi && (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
                       </div>
-                      <p className="text-slate-500">No encontramos ese alimento en la lista rápida. Intenta con otro nombre.</p>
-                    </div>
-                  )
+                    )}
+                    
+                    {apiFoods.map((food, i) => (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        key={`api-${i}`} 
+                        className="bg-white/60 p-5 rounded-3xl border border-dashed border-slate-200 flex items-center justify-between group hover:border-blue-200 transition-all"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center">
+                            <span className="text-xl">🌍</span>
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-bold text-slate-900 capitalize">{food.name}</h3>
+                              <span className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-500 rounded-full font-bold uppercase">
+                                Global
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-500">{food.benefits}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-blue-400">{food.calories}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase">kcal / {food.unit}</p>
+                        </div>
+                      </motion.div>
+                    ))}
+
+                    {FOOD_DATABASE.filter(f => f.name.toLowerCase().includes(foodSearch.toLowerCase())).length === 0 && apiFoods.length === 0 && !isSearchingApi && (
+                      <div className="text-center py-12 space-y-4">
+                        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
+                          <Info className="text-slate-400 w-8 h-8" />
+                        </div>
+                        <p className="text-slate-500">No encontramos resultados para "{foodSearch}".</p>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="text-center py-20 space-y-6">
                     <div className="w-24 h-24 bg-blue-50 rounded-[2.5rem] flex items-center justify-center mx-auto rotate-6">

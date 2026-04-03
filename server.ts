@@ -55,6 +55,39 @@ async function startServer() {
     spoonReq.end();
   });
 
+  // API Route for Food Search (Ingredients/General Food)
+  app.get("/api/food/search", (req, res) => {
+    const query = req.query.q || "";
+    const options = {
+      method: "GET",
+      hostname: "spoonacular-recipe-food-nutrition-v1.p.rapidapi.com",
+      port: null,
+      path: `/food/ingredients/search?query=${encodeURIComponent(query as string)}&number=10&addChildren=true`,
+      headers: {
+        "x-rapidapi-key": process.env.RAPIDAPI_KEY || "",
+        "x-rapidapi-host": "spoonacular-recipe-food-nutrition-v1.p.rapidapi.com",
+        "Content-Type": "application/json",
+      },
+    };
+
+    const spoonReq = https.request(options, (spoonRes) => {
+      const chunks: Buffer[] = [];
+      spoonRes.on("data", (chunk) => chunks.push(chunk));
+      spoonRes.on("end", () => {
+        const body = Buffer.concat(chunks);
+        try {
+          const data = JSON.parse(body.toString());
+          res.json(data);
+        } catch (e) {
+          res.status(500).json({ error: "Failed to parse Spoonacular response" });
+        }
+      });
+    });
+
+    spoonReq.on("error", (error) => res.status(500).json({ error: error.message }));
+    spoonReq.end();
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
