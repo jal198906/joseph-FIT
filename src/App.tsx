@@ -18,7 +18,9 @@ import {
   Timer,
   Info,
   Scan,
-  Loader2
+  Loader2,
+  Camera,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, addDays, startOfToday, isSameDay } from 'date-fns';
@@ -26,6 +28,7 @@ import { es } from 'date-fns/locale';
 import { DIETS, EXERCISES, type Diet, type Exercise, type DailyPlan } from './types';
 import { FOOD_DATABASE, type FoodInfo } from './data/foods';
 import { cn } from './lib/utils';
+import { GoogleGenAI } from "@google/genai";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'today' | 'diets' | 'exercises' | 'fruits'>('today');
@@ -40,9 +43,19 @@ export default function App() {
   const [apiFoods, setApiFoods] = useState<any[]>([]);
   const [isSearchingApi, setIsSearchingApi] = useState(false);
 
+  const normalizeString = (str: string) => {
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  };
+
   // Recipe state
   const [randomRecipe, setRandomRecipe] = useState<any>(null);
   const [isLoadingRecipe, setIsLoadingRecipe] = useState(false);
+
+  // Scanner state
+  const [showScanner, setShowScanner] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [scanResult, setScanResult] = useState<any>(null);
+
   useEffect(() => {
     const savedName = localStorage.getItem('joseph_fit_name');
     if (savedName) {
@@ -141,6 +154,45 @@ export default function App() {
   };
 
   const todayPlan = dailyPlans.find(plan => isSameDay(new Date(plan.date), startOfToday()));
+
+  const handleScanImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsAnalyzing(true);
+    setScanResult(null);
+
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = async () => {
+        const base64Data = (reader.result as string).split(',')[1];
+        
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+        const response = await ai.models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: [
+            {
+              parts: [
+                { text: "Analiza esta imagen de comida. Identifica el plato o alimento, estima las calorías por porción estándar y menciona 2 beneficios nutricionales. Responde en formato JSON: { \"name\": \"Nombre\", \"calories\": 0, \"benefits\": \"Beneficio 1, Beneficio 2\" }" },
+                { inlineData: { data: base64Data, mimeType: file.type } }
+              ]
+            }
+          ],
+          config: {
+            responseMimeType: "application/json"
+          }
+        });
+
+        const result = JSON.parse(response.text || "{}");
+        setScanResult(result);
+        setIsAnalyzing(false);
+      };
+    } catch (error) {
+      console.error("Error analyzing image:", error);
+      setIsAnalyzing(false);
+    }
+  };
 
   if (!userName) {
     return (
@@ -480,14 +532,19 @@ export default function App() {
                   onChange={(e) => setFoodSearch(e.target.value)}
                   className="w-full px-6 py-5 bg-white border border-slate-200 rounded-[2rem] outline-none focus:border-blue-600 transition-all shadow-lg shadow-slate-100 text-lg"
                 />
-                <Scan className="absolute right-6 top-5 text-blue-600 w-6 h-6" />
+                <button 
+                  onClick={() => setShowScanner(true)}
+                  className="absolute right-6 top-5 text-blue-600 w-6 h-6 hover:scale-110 transition-transform"
+                >
+                  <Scan />
+                </button>
               </div>
 
               <div className="grid gap-4">
                 {foodSearch.trim() !== '' ? (
                   <>
                     {/* Local Results */}
-                    {FOOD_DATABASE.filter(f => f.name.toLowerCase().includes(foodSearch.toLowerCase())).map((food, i) => (
+                    {FOOD_DATABASE.filter(f => normalizeString(f.name).includes(normalizeString(foodSearch))).map((food, i) => (
                       <motion.div 
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -558,7 +615,7 @@ export default function App() {
                       </motion.div>
                     ))}
 
-                    {FOOD_DATABASE.filter(f => f.name.toLowerCase().includes(foodSearch.toLowerCase())).length === 0 && apiFoods.length === 0 && !isSearchingApi && (
+                    {FOOD_DATABASE.filter(f => normalizeString(f.name).includes(normalizeString(foodSearch))).length === 0 && apiFoods.length === 0 && !isSearchingApi && (
                       <div className="text-center py-12 space-y-4">
                         <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
                           <Info className="text-slate-400 w-8 h-8" />
@@ -627,6 +684,97 @@ export default function App() {
           <span className="text-[10px] font-bold uppercase">Ejercicios</span>
         </button>
       </nav>
+
+      {/* Scanner Modal */}
+      <AnimatePresence>
+        {showScanner && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                if (!isAnalyzing) setShowScanner(false);
+              }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 relative z-10 shadow-2xl overflow-hidden"
+            >
+              <button 
+                onClick={() => setShowScanner(false)}
+                className="absolute top-6 right-6 p-2 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6 text-slate-400" />
+              </button>
+
+              <div className="text-center space-y-6">
+                <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center mx-auto rotate-3 shadow-lg shadow-blue-200">
+                  <Camera className="text-white w-10 h-10" />
+                </div>
+                
+                <div>
+                  <h3 className="text-2xl font-bold text-slate-900">Escáner IA</h3>
+                  <p className="text-slate-500 text-sm mt-2">
+                    Toma una foto de tu comida y Joseph-FIT la analizará por ti.
+                  </p>
+                </div>
+
+                {!scanResult && !isAnalyzing && (
+                  <label className="block w-full py-5 bg-blue-600 text-white rounded-2xl font-bold text-lg shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all cursor-pointer text-center">
+                    Capturar o Subir Foto
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      capture="environment"
+                      onChange={handleScanImage}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+
+                {isAnalyzing && (
+                  <div className="py-8 space-y-4">
+                    <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto" />
+                    <p className="text-blue-600 font-bold animate-pulse">Analizando tu plato...</p>
+                  </div>
+                )}
+
+                {scanResult && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-slate-50 p-6 rounded-3xl border border-slate-100 text-left space-y-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xl font-bold text-slate-900">{scanResult.name}</h4>
+                      <div className="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold">
+                        {scanResult.calories} Cal
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-xs font-bold text-slate-400 uppercase">Beneficios</p>
+                      <p className="text-sm text-slate-600 leading-relaxed">{scanResult.benefits}</p>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setScanResult(null);
+                        setShowScanner(false);
+                      }}
+                      className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold text-sm mt-4"
+                    >
+                      Cerrar y Guardar
+                    </button>
+                  </motion.div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Reminder Modal */}
       <AnimatePresence>

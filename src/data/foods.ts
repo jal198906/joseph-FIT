@@ -299,4 +299,9 @@ export const FOOD_DATABASE: FoodInfo[] = [
   { name: "Pastel de Tres Leches", calories: 320, unit: "100g", category: "Postre", benefits: "Húmedo y muy dulce." },
   { name: "Mousse de Chocolate", calories: 225, unit: "100g", category: "Postre", benefits: "Ligero y aireado." },
   { name: "Gelatina de Frutas", calories: 62, unit: "100g", category: "Postre", benefits: "Baja en calorías y refrescante." },
+
+  // --- SNACKS Y OTROS ---
+  { name: "Palomitas de Maíz (Naturales)", calories: 387, unit: "100g", category: "Snack", benefits: "Ricas en fibra y volumen, bajas en grasa si son naturales." },
+  { name: "Palomitas de Maíz (Mantequilla)", calories: 513, unit: "100g", category: "Snack", benefits: "Sabor intenso, mayor aporte calórico." },
+  { name: "Tortillas con Quesillo", calories: 320, unit: "1 unidad", category: "Hondureño", benefits: "Dos tortillas con quesillo fundido, un clásico hondureño." },
 ];
