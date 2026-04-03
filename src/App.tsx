@@ -41,6 +41,7 @@ import LandingPage from './components/LandingPage';
 
 export default function App() {
   const [showLanding, setShowLanding] = useState(true);
+  const [currentTime, setCurrentTime] = useState(new Date());
   const [activeTab, setActiveTab] = useState<'today' | 'diets' | 'exercises' | 'fruits'>('today');
   const [selectedDiet, setSelectedDiet] = useState<Diet>(DIETS[0]);
   const [dailyPlans, setDailyPlans] = useState<DailyPlan[]>([]);
@@ -135,6 +136,13 @@ export default function App() {
     if (savedDailyTasks) {
       setDailyTasks(JSON.parse(savedDailyTasks));
     }
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+    return () => clearInterval(timer);
   }, []);
 
   // Stopwatch effect
@@ -444,12 +452,19 @@ export default function App() {
   };
 
   if (showLanding) {
-    return <LandingPage onStart={() => setShowLanding(false)} />;
+    return <LandingPage onStart={() => setShowLanding(false)} currentTime={currentTime} />;
   }
 
   if (!userName) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 relative">
+        <div className="absolute top-6 right-6">
+          <div className="px-3 py-1.5 bg-white rounded-full border border-slate-200 shadow-sm">
+            <span className="text-xs font-bold text-slate-500 tabular-nums">
+              {format(currentTime, 'HH:mm')}
+            </span>
+          </div>
+        </div>
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -503,6 +518,11 @@ export default function App() {
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
             Joseph-<span className="text-blue-600">FIT</span>
           </h1>
+          <div className="ml-2 px-2 py-1 bg-slate-100 rounded-md">
+            <span className="text-[10px] font-bold text-slate-500 tabular-nums">
+              {format(currentTime, 'HH:mm')}
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-4">
           <button 

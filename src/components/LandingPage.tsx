@@ -15,9 +15,10 @@ import {
 
 interface LandingPageProps {
   onStart: () => void;
+  currentTime: Date;
 }
 
-export default function LandingPage({ onStart }: LandingPageProps) {
+export default function LandingPage({ onStart, currentTime }: LandingPageProps) {
   const features = [
     {
       icon: <Utensils className="w-6 h-6 text-orange-500" />,
@@ -43,6 +44,15 @@ export default function LandingPage({ onStart }: LandingPageProps) {
 
   return (
     <div className="min-h-screen bg-slate-50 overflow-x-hidden">
+      {/* Top Bar with Clock */}
+      <div className="absolute top-4 right-6 z-50">
+        <div className="px-3 py-1.5 bg-white/50 backdrop-blur-md rounded-full border border-white/20 shadow-sm">
+          <span className="text-xs font-bold text-slate-600 tabular-nums">
+            {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
+        </div>
+      </div>
+
       {/* Hero Section */}
       <section className="relative pt-20 pb-32 px-6 overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-full pointer-events-none">
