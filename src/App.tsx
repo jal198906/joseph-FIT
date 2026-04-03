@@ -27,12 +27,13 @@ import { format, addDays, startOfToday, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { GoogleGenAI } from "@google/genai";
 import { DIETS, EXERCISES, type Diet, type Exercise, type DailyPlan } from './types';
+import { FRUIT_DATABASE, type FruitInfo } from './data/fruits';
 import { cn } from './lib/utils';
 
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'today' | 'diets' | 'exercises' | 'scanner'>('today');
+  const [activeTab, setActiveTab] = useState<'today' | 'diets' | 'exercises' | 'scanner' | 'fruits'>('today');
   const [selectedDiet, setSelectedDiet] = useState<Diet>(DIETS[0]);
   const [dailyPlans, setDailyPlans] = useState<DailyPlan[]>([]);
   const [showReminderModal, setShowReminderModal] = useState(false);
@@ -41,10 +42,11 @@ export default function App() {
   
   // Scanner state
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [scanResult, setScanResult] = useState<{ food: string; calories: string; details: string } | null>(null);
+  const [scanResult, setScanResult] = useState<{ food: string; calories: string; details: string; isFruit?: boolean; fruitInfo?: FruitInfo } | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
-  // Initialize daily plans and user name
+  // Fruit Library state
+  const [fruitSearch, setFruitSearch] = useState('');
   useEffect(() => {
     const savedName = localStorage.getItem('joseph_fit_name');
     if (savedName) {
@@ -96,7 +98,14 @@ export default function App() {
         contents: [
           {
             parts: [
-              { text: "Analiza esta imagen de comida y estima las calorías. Responde en formato JSON puro con los campos: food (nombre del plato), calories (número estimado de calorías), details (breve descripción nutricional). Responde en español." },
+              { text: `Analiza esta imagen de comida y estima las calorías. 
+              Si detectas que es una fruta, intenta identificarla específicamente. 
+              Responde en formato JSON puro con los campos: 
+              food (nombre del plato o fruta), 
+              calories (número estimado de calorías), 
+              details (breve descripción nutricional y beneficios),
+              isFruit (booleano, true si es una fruta).
+              Responde en español.` },
               { inlineData: { data: base64Data, mimeType: "image/jpeg" } }
             ]
           }
@@ -107,6 +116,19 @@ export default function App() {
       });
 
       const result = JSON.parse(response.text || '{}');
+      
+      // Cross-reference with our fruit database if it's a fruit
+      if (result.isFruit) {
+        const matchedFruit = FRUIT_DATABASE.find(f => 
+          f.name.toLowerCase().includes(result.food.toLowerCase()) || 
+          result.food.toLowerCase().includes(f.name.toLowerCase())
+        );
+        if (matchedFruit) {
+          result.fruitInfo = matchedFruit;
+          result.details = `${matchedFruit.benefits} ${result.details}`;
+        }
+      }
+      
       setScanResult(result);
     } catch (error) {
       console.error("Error analizando imagen:", error);
@@ -522,11 +544,56 @@ export default function App() {
               </div>
             </motion.div>
           )}
+          {activeTab === 'fruits' && (
+            <motion.div
+              key="fruits"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              <div className="text-center space-y-2">
+                <h2 className="text-2xl font-bold text-slate-900">Biblioteca de Frutas</h2>
+                <p className="text-slate-500 text-sm">Información nutricional de las 100 frutas más consumidas.</p>
+              </div>
+
+              <div className="relative">
+                <input 
+                  type="text"
+                  placeholder="Buscar fruta..."
+                  value={fruitSearch}
+                  onChange={(e) => setFruitSearch(e.target.value)}
+                  className="w-full px-6 py-4 bg-white border border-slate-200 rounded-2xl outline-none focus:border-blue-600 transition-all shadow-sm"
+                />
+                <Plus className="absolute right-4 top-4 text-slate-300 w-6 h-6 rotate-45" />
+              </div>
+
+              <div className="grid gap-4">
+                {FRUIT_DATABASE.filter(f => f.name.toLowerCase().includes(fruitSearch.toLowerCase())).map((fruit, i) => (
+                  <div key={i} className="bg-white p-5 rounded-3xl border border-slate-100 flex items-center justify-between group hover:border-blue-200 transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center group-hover:bg-orange-100 transition-colors">
+                        <span className="text-xl">🍎</span>
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-900">{fruit.name}</h3>
+                        <p className="text-xs text-slate-500">{fruit.benefits}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-blue-600">{fruit.calories}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">kcal / {fruit.unit}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
       </main>
 
       {/* Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-slate-200 px-6 py-3 flex items-center justify-around z-50">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-slate-200 px-4 py-3 flex items-center justify-around z-50">
         <button 
           onClick={() => setActiveTab('today')}
           className={cn(
@@ -556,6 +623,16 @@ export default function App() {
         >
           <Scan className="w-6 h-6" />
           <span className="text-[10px] font-bold uppercase">Escáner</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('fruits')}
+          className={cn(
+            "flex flex-col items-center gap-1 transition-colors",
+            activeTab === 'fruits' ? "text-blue-600" : "text-slate-400"
+          )}
+        >
+          <Plus className="w-6 h-6" />
+          <span className="text-[10px] font-bold uppercase">Frutas</span>
         </button>
         <button 
           onClick={() => setActiveTab('exercises')}
