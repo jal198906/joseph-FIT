@@ -47,6 +47,10 @@ export default function App() {
 
   // Fruit Library state
   const [fruitSearch, setFruitSearch] = useState('');
+
+  // Recipe state
+  const [randomRecipe, setRandomRecipe] = useState<any>(null);
+  const [isLoadingRecipe, setIsLoadingRecipe] = useState(false);
   useEffect(() => {
     const savedName = localStorage.getItem('joseph_fit_name');
     if (savedName) {
@@ -139,6 +143,20 @@ export default function App() {
       });
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+  const fetchRandomRecipe = async () => {
+    setIsLoadingRecipe(true);
+    try {
+      const response = await fetch('/api/recipes/random');
+      const data = await response.json();
+      if (data.recipes && data.recipes.length > 0) {
+        setRandomRecipe(data.recipes[0]);
+      }
+    } catch (error) {
+      console.error("Error fetching recipe:", error);
+    } finally {
+      setIsLoadingRecipe(false);
     }
   };
   const toggleTask = (date: string) => {
@@ -326,7 +344,48 @@ export default function App() {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-6"
             >
-              <h2 className="text-2xl font-bold text-slate-900">Sugerencias de Dieta</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-slate-900">Sugerencias de Dieta</h2>
+                <button 
+                  onClick={fetchRandomRecipe}
+                  disabled={isLoadingRecipe}
+                  className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors disabled:opacity-50"
+                  title="Obtener receta aleatoria"
+                >
+                  {isLoadingRecipe ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+                </button>
+              </div>
+
+              {randomRecipe && (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-blue-600 rounded-[2rem] p-6 text-white shadow-xl shadow-blue-200 relative overflow-hidden"
+                >
+                  <div className="relative z-10">
+                    <span className="px-3 py-1 bg-white/20 backdrop-blur-md text-xs font-bold rounded-full uppercase mb-4 inline-block">
+                      Receta del Momento 🌟
+                    </span>
+                    <h3 className="text-xl font-bold mb-2">{randomRecipe.title}</h3>
+                    <div className="flex gap-4 text-xs text-blue-100 mb-4">
+                      <span className="flex items-center gap-1"><Timer className="w-3 h-3" /> {randomRecipe.readyInMinutes} min</span>
+                      <span className="flex items-center gap-1"><Flame className="w-3 h-3" /> {Math.round(randomRecipe.healthScore)} Health Score</span>
+                    </div>
+                    <a 
+                      href={randomRecipe.sourceUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-block bg-white text-blue-600 px-6 py-2 rounded-xl font-bold text-sm hover:bg-blue-50 transition-colors"
+                    >
+                      Ver Receta Completa
+                    </a>
+                  </div>
+                  <div className="absolute -right-8 -bottom-8 opacity-20">
+                    <Utensils className="w-40 h-40" />
+                  </div>
+                </motion.div>
+              )}
+
               <div className="grid gap-6">
                 {DIETS.map((diet) => (
                   <div 
