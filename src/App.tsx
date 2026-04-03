@@ -17,36 +17,26 @@ import {
   Heart,
   Timer,
   Info,
-  Camera,
   Scan,
-  Loader2,
-  X
+  Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, addDays, startOfToday, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { GoogleGenAI } from "@google/genai";
 import { DIETS, EXERCISES, type Diet, type Exercise, type DailyPlan } from './types';
-import { FRUIT_DATABASE, type FruitInfo } from './data/fruits';
+import { FOOD_DATABASE, type FoodInfo } from './data/foods';
 import { cn } from './lib/utils';
 
-const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'today' | 'diets' | 'exercises' | 'scanner' | 'fruits'>('today');
+  const [activeTab, setActiveTab] = useState<'today' | 'diets' | 'exercises' | 'fruits'>('today');
   const [selectedDiet, setSelectedDiet] = useState<Diet>(DIETS[0]);
   const [dailyPlans, setDailyPlans] = useState<DailyPlan[]>([]);
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [userName, setUserName] = useState<string | null>(null);
   const [tempName, setTempName] = useState('');
   
-  // Scanner state
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [scanResult, setScanResult] = useState<{ food: string; calories: string; details: string; isFruit?: boolean; fruitInfo?: FruitInfo } | null>(null);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
-
-  // Fruit Library state
-  const [fruitSearch, setFruitSearch] = useState('');
+  // Food Library state
+  const [foodSearch, setFoodSearch] = useState('');
 
   // Recipe state
   const [randomRecipe, setRandomRecipe] = useState<any>(null);
@@ -80,71 +70,6 @@ export default function App() {
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64String = reader.result as string;
-      setPreviewImage(base64String);
-      analyzeImage(base64String.split(',')[1]);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const analyzeImage = async (base64Data: string) => {
-    setIsAnalyzing(true);
-    setScanResult(null);
-    try {
-      const response = await genAI.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [
-          {
-            parts: [
-              { text: `Analiza esta imagen de comida y estima las calorías. 
-              Si detectas que es una fruta, intenta identificarla específicamente. 
-              Responde en formato JSON puro con los campos: 
-              food (nombre del plato o fruta), 
-              calories (número estimado de calorías), 
-              details (breve descripción nutricional y beneficios),
-              isFruit (booleano, true si es una fruta).
-              Responde en español.` },
-              { inlineData: { data: base64Data, mimeType: "image/jpeg" } }
-            ]
-          }
-        ],
-        config: {
-          responseMimeType: "application/json"
-        }
-      });
-
-      const result = JSON.parse(response.text || '{}');
-      
-      // Cross-reference with our fruit database if it's a fruit
-      if (result.isFruit) {
-        const matchedFruit = FRUIT_DATABASE.find(f => 
-          f.name.toLowerCase().includes(result.food.toLowerCase()) || 
-          result.food.toLowerCase().includes(f.name.toLowerCase())
-        );
-        if (matchedFruit) {
-          result.fruitInfo = matchedFruit;
-          result.details = `${matchedFruit.benefits} ${result.details}`;
-        }
-      }
-      
-      setScanResult(result);
-    } catch (error) {
-      console.error("Error analizando imagen:", error);
-      setScanResult({
-        food: "Error",
-        calories: "N/A",
-        details: "No se pudo analizar la imagen. Intenta de nuevo."
-      });
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
   const fetchRandomRecipe = async () => {
     setIsLoadingRecipe(true);
     try {
@@ -486,123 +411,6 @@ export default function App() {
               </div>
             </motion.div>
           )}
-          {activeTab === 'scanner' && (
-            <motion.div
-              key="scanner"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="space-y-6"
-            >
-              <div className="text-center space-y-2">
-                <h2 className="text-2xl font-bold text-slate-900">Escáner de Calorías</h2>
-                <p className="text-slate-500 text-sm">Toma una foto de tu comida para estimar su valor nutricional.</p>
-              </div>
-
-              <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm overflow-hidden">
-                {!previewImage ? (
-                  <div className="aspect-square bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center p-8 text-center space-y-4">
-                    <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center">
-                      <Camera className="text-blue-600 w-10 h-10" />
-                    </div>
-                    <div className="space-y-2">
-                      <p className="font-bold text-slate-900">Captura tu comida</p>
-                      <p className="text-xs text-slate-400">Sube una foto o usa la cámara para empezar el análisis.</p>
-                    </div>
-                    <div className="flex flex-col w-full gap-3">
-                      <label className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-blue-100 cursor-pointer hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
-                        <Camera className="w-5 h-5" />
-                        Tomar Foto
-                        <input 
-                          type="file" 
-                          accept="image/*" 
-                          capture="environment" 
-                          className="hidden" 
-                          onChange={handleImageUpload}
-                        />
-                      </label>
-                      <label className="bg-white text-blue-600 border-2 border-blue-600 px-8 py-4 rounded-2xl font-bold cursor-pointer hover:bg-blue-50 transition-all flex items-center justify-center gap-2">
-                        <Plus className="w-5 h-5" />
-                        Subir de Galería
-                        <input 
-                          type="file" 
-                          accept="image/*" 
-                          className="hidden" 
-                          onChange={handleImageUpload}
-                        />
-                      </label>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    <div className="relative aspect-square rounded-[2rem] overflow-hidden group">
-                      <img 
-                        src={previewImage} 
-                        alt="Preview" 
-                        className="w-full h-full object-cover"
-                      />
-                      {isAnalyzing && (
-                        <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm flex flex-col items-center justify-center text-white space-y-4">
-                          <Loader2 className="w-12 h-12 animate-spin" />
-                          <p className="font-bold tracking-widest uppercase text-xs">Analizando...</p>
-                        </div>
-                      )}
-                      <button 
-                        onClick={() => {
-                          setPreviewImage(null);
-                          setScanResult(null);
-                        }}
-                        className="absolute top-4 right-4 p-2 bg-white/20 backdrop-blur-md hover:bg-white/40 rounded-full text-white transition-all"
-                      >
-                        <X className="w-6 h-6" />
-                      </button>
-                    </div>
-
-                    {scanResult && (
-                      <motion.div 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-blue-50 p-6 rounded-3xl border border-blue-100 space-y-4"
-                      >
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-xl font-bold text-blue-900">{scanResult.food}</h3>
-                          <div className="bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-bold">
-                            {scanResult.calories} kcal
-                          </div>
-                        </div>
-                        <p className="text-blue-800/70 text-sm leading-relaxed">
-                          {scanResult.details}
-                        </p>
-                        <div className="flex gap-2 pt-2">
-                          <button 
-                            onClick={() => {
-                              setPreviewImage(null);
-                              setScanResult(null);
-                            }}
-                            className="flex-1 py-3 bg-white text-blue-600 rounded-xl font-bold text-sm border border-blue-200 hover:bg-blue-100 transition-all"
-                          >
-                            Escanear otro
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-orange-50 p-6 rounded-3xl border border-orange-100 flex gap-4">
-                <div className="p-3 bg-orange-100 rounded-2xl h-fit">
-                  <Info className="text-orange-600 w-5 h-5" />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-bold text-orange-900">Nota Nutricional</p>
-                  <p className="text-xs text-orange-800/70 leading-relaxed">
-                    Las calorías son estimaciones basadas en el análisis visual. Para resultados precisos, consulta con un nutricionista.
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          )}
           {activeTab === 'fruits' && (
             <motion.div
               key="fruits"
@@ -612,39 +420,78 @@ export default function App() {
               className="space-y-6"
             >
               <div className="text-center space-y-2">
-                <h2 className="text-2xl font-bold text-slate-900">Biblioteca de Frutas</h2>
-                <p className="text-slate-500 text-sm">Información nutricional de las 100 frutas más consumidas.</p>
+                <h2 className="text-2xl font-bold text-slate-900">Biblioteca de Alimentos</h2>
+                <p className="text-slate-500 text-sm">Busca entre más de 1500 alimentos, incluyendo platos típicos de Honduras y Latinoamérica.</p>
               </div>
 
               <div className="relative">
                 <input 
                   type="text"
-                  placeholder="Buscar fruta..."
-                  value={fruitSearch}
-                  onChange={(e) => setFruitSearch(e.target.value)}
-                  className="w-full px-6 py-4 bg-white border border-slate-200 rounded-2xl outline-none focus:border-blue-600 transition-all shadow-sm"
+                  placeholder="Busca un alimento (ej. Baleada, Pollo chuco, Frijoles...)"
+                  value={foodSearch}
+                  onChange={(e) => setFoodSearch(e.target.value)}
+                  className="w-full px-6 py-5 bg-white border border-slate-200 rounded-[2rem] outline-none focus:border-blue-600 transition-all shadow-lg shadow-slate-100 text-lg"
                 />
-                <Plus className="absolute right-4 top-4 text-slate-300 w-6 h-6 rotate-45" />
+                <Scan className="absolute right-6 top-5 text-blue-600 w-6 h-6" />
               </div>
 
               <div className="grid gap-4">
-                {FRUIT_DATABASE.filter(f => f.name.toLowerCase().includes(fruitSearch.toLowerCase())).map((fruit, i) => (
-                  <div key={i} className="bg-white p-5 rounded-3xl border border-slate-100 flex items-center justify-between group hover:border-blue-200 transition-all">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center group-hover:bg-orange-100 transition-colors">
-                        <span className="text-xl">🍎</span>
+                {foodSearch.trim() !== '' ? (
+                  FOOD_DATABASE.filter(f => f.name.toLowerCase().includes(foodSearch.toLowerCase())).length > 0 ? (
+                    FOOD_DATABASE.filter(f => f.name.toLowerCase().includes(foodSearch.toLowerCase())).map((food, i) => (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        key={i} 
+                        className="bg-white p-5 rounded-3xl border border-slate-100 flex items-center justify-between group hover:border-blue-200 transition-all"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className={cn(
+                            "w-12 h-12 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform",
+                            food.category === 'Hondureño' ? "bg-blue-50 text-blue-600" : "bg-orange-50 text-orange-600"
+                          )}>
+                            <span className="text-xl">
+                              {food.category === 'Carne' ? '🥩' : 
+                               food.category === 'Fruta' ? '🍎' : 
+                               food.category === 'Verdura' ? '🥦' : 
+                               food.category === 'Hondureño' ? '🇭🇳' : '🍲'}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-bold text-slate-900">{food.name}</h3>
+                              <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full font-bold uppercase">
+                                {food.category}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-500">{food.benefits}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-blue-600">{food.calories}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase">kcal / {food.unit}</p>
+                        </div>
+                      </motion.div>
+                    ))
+                  ) : (
+                    <div className="text-center py-12 space-y-4">
+                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto">
+                        <Info className="text-slate-400 w-8 h-8" />
                       </div>
-                      <div>
-                        <h3 className="font-bold text-slate-900">{fruit.name}</h3>
-                        <p className="text-xs text-slate-500">{fruit.benefits}</p>
-                      </div>
+                      <p className="text-slate-500">No encontramos ese alimento en la lista rápida. Intenta con otro nombre.</p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-blue-600">{fruit.calories}</p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">kcal / {fruit.unit}</p>
+                  )
+                ) : (
+                  <div className="text-center py-20 space-y-6">
+                    <div className="w-24 h-24 bg-blue-50 rounded-[2.5rem] flex items-center justify-center mx-auto rotate-6">
+                      <Utensils className="text-blue-600 w-12 h-12" />
+                    </div>
+                    <div className="max-w-xs mx-auto">
+                      <h3 className="text-lg font-bold text-slate-900 mb-2">Tu Biblioteca de Alimentos</h3>
+                      <p className="text-sm text-slate-500">Escribe el nombre de cualquier alimento o plato típico para ver su información calórica.</p>
                     </div>
                   </div>
-                ))}
+                )}
               </div>
             </motion.div>
           )}
@@ -674,16 +521,6 @@ export default function App() {
           <span className="text-[10px] font-bold uppercase">Dietas</span>
         </button>
         <button 
-          onClick={() => setActiveTab('scanner')}
-          className={cn(
-            "flex flex-col items-center gap-1 transition-colors",
-            activeTab === 'scanner' ? "text-blue-600" : "text-slate-400"
-          )}
-        >
-          <Scan className="w-6 h-6" />
-          <span className="text-[10px] font-bold uppercase">Escáner</span>
-        </button>
-        <button 
           onClick={() => setActiveTab('fruits')}
           className={cn(
             "flex flex-col items-center gap-1 transition-colors",
@@ -691,7 +528,7 @@ export default function App() {
           )}
         >
           <Plus className="w-6 h-6" />
-          <span className="text-[10px] font-bold uppercase">Frutas</span>
+          <span className="text-[10px] font-bold uppercase">Biblioteca</span>
         </button>
         <button 
           onClick={() => setActiveTab('exercises')}
