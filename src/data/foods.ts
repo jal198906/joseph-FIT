@@ -153,6 +153,9 @@ export const FOOD_DATABASE: FoodInfo[] = [
   // --- FRUTAS ---
   { name: "Manzana", calories: 52, unit: "100g", category: "Fruta", benefits: "Fibra y vitamina C." },
   { name: "Plátano", calories: 89, unit: "100g", category: "Fruta", benefits: "Potasio y energía." },
+  { name: "Guineo Maduro (Banana)", calories: 89, unit: "100g", category: "Fruta", benefits: "Energía rápida y potasio." },
+  { name: "Guineo Verde (Cocido)", calories: 105, unit: "100g", category: "Fruta", benefits: "Almidón resistente y fibra." },
+  { name: "Guineo de Seda", calories: 96, unit: "100g", category: "Fruta", benefits: "Textura suave y muy dulce." },
   { name: "Mango", calories: 60, unit: "100g", category: "Fruta", benefits: "Vitamina A y C." },
   { name: "Piña", calories: 50, unit: "100g", category: "Fruta", benefits: "Digestiva (bromelina)." },
   { name: "Sandía", calories: 30, unit: "100g", category: "Fruta", benefits: "Hidratación máxima." },
