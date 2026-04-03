@@ -456,7 +456,7 @@ export default function App() {
             >
               <div className="text-center space-y-2">
                 <h2 className="text-2xl font-bold text-slate-900">Biblioteca de Alimentos</h2>
-                <p className="text-slate-500 text-sm">Busca entre más de 1500 alimentos, incluyendo platos típicos de Honduras y Latinoamérica.</p>
+                <p className="text-slate-500 text-sm">Buscar alimento o plato.</p>
               </div>
 
               <div className="relative">
@@ -503,9 +503,10 @@ export default function App() {
                             <p className="text-xs text-slate-500">{food.benefits}</p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold text-blue-600">{food.calories}</p>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase">kcal / {food.unit}</p>
+                        <div className="text-right flex flex-col items-end">
+                          <p className="text-lg font-bold text-blue-600 leading-tight">{food.calories} <span className="text-[10px] uppercase">kcal</span></p>
+                          <p className="text-xs font-semibold text-slate-400 leading-tight">{(food.calories * 1000).toLocaleString()} <span className="text-[9px] uppercase">cal</span></p>
+                          <p className="text-[9px] font-bold text-slate-300 uppercase mt-1">/ {food.unit}</p>
                         </div>
                       </motion.div>
                     ))}
@@ -538,9 +539,10 @@ export default function App() {
                             <p className="text-xs text-slate-500">{food.benefits}</p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold text-blue-400">{food.calories}</p>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase">kcal / {food.unit}</p>
+                        <div className="text-right flex flex-col items-end">
+                          <p className="text-lg font-bold text-blue-400 leading-tight">{food.calories} <span className="text-[10px] uppercase">kcal</span></p>
+                          <p className="text-xs font-semibold text-slate-400 leading-tight">{(food.calories * 1000).toLocaleString()} <span className="text-[9px] uppercase">cal</span></p>
+                          <p className="text-[9px] font-bold text-slate-300 uppercase mt-1">/ {food.unit}</p>
                         </div>
                       </motion.div>
                     ))}
