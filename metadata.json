@@ -1,0 +1,8 @@
+{
+  "name": "Joseph-FIT",
+  "description": "Tu asistente personal de fitness para dietas personalizadas, ejercicios diarios y recordatorios de salud.",
+  "requestFramePermissions": [
+    "notifications",
+    "camera"
+  ]
+}
