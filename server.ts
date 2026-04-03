@@ -88,6 +88,48 @@ async function startServer() {
     spoonReq.end();
   });
 
+  // API Route for Food Nutrition (Bulk)
+  app.post("/api/food/nutrition", (req, res) => {
+    const { ingredients } = req.body;
+    if (!ingredients || !Array.isArray(ingredients)) {
+      return res.status(400).json({ error: "Ingredients array is required" });
+    }
+
+    const ingredientList = ingredients.join("\n");
+    const postData = `ingredientList=${encodeURIComponent(ingredientList)}&servings=1&includeNutrition=true`;
+
+    const options = {
+      method: "POST",
+      hostname: "spoonacular-recipe-food-nutrition-v1.p.rapidapi.com",
+      port: null,
+      path: "/recipes/parseIngredients",
+      headers: {
+        "x-rapidapi-key": process.env.RAPIDAPI_KEY || "",
+        "x-rapidapi-host": "spoonacular-recipe-food-nutrition-v1.p.rapidapi.com",
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Length": Buffer.byteLength(postData),
+      },
+    };
+
+    const spoonReq = https.request(options, (spoonRes) => {
+      const chunks: Buffer[] = [];
+      spoonRes.on("data", (chunk) => chunks.push(chunk));
+      spoonRes.on("end", () => {
+        const body = Buffer.concat(chunks);
+        try {
+          const data = JSON.parse(body.toString());
+          res.json(data);
+        } catch (e) {
+          res.status(500).json({ error: "Failed to parse Spoonacular response" });
+        }
+      });
+    });
+
+    spoonReq.on("error", (error) => res.status(500).json({ error: error.message }));
+    spoonReq.write(postData);
+    spoonReq.end();
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

@@ -81,16 +81,29 @@ export default function App() {
     try {
       const response = await fetch(`/api/food/search?q=${encodeURIComponent(query)}`);
       const data = await response.json();
-      if (data.results) {
-        // Map Spoonacular results to our FoodInfo format
-        const mapped = data.results.map((item: any) => ({
-          name: item.name,
-          calories: Math.round(Math.random() * 200 + 50), // Mock calories as Spoonacular ingredients search needs separate call for nutrition
-          unit: "100g",
-          category: "Global",
-          benefits: "Alimento identificado vía API Global."
-        }));
-        setApiFoods(mapped);
+      if (data.results && data.results.length > 0) {
+        const names = data.results.map((item: any) => item.name);
+        
+        // Fetch nutrition for these names
+        const nutritionResponse = await fetch("/api/food/nutrition", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ingredients: names }),
+        });
+        const nutritionData = await nutritionResponse.json();
+        
+        if (Array.isArray(nutritionData)) {
+          const mapped = nutritionData.map((item: any) => ({
+            name: item.originalName || item.name,
+            calories: Math.round(item.nutrition?.nutrients?.find((n: any) => n.name === "Calories")?.amount || 0),
+            unit: `${item.amount} ${item.unit}`,
+            category: "Global",
+            benefits: `Alimento identificado vía API Global. Rico en ${item.nutrition?.nutrients?.[0]?.name || 'nutrientes'}.`
+          }));
+          setApiFoods(mapped);
+        }
+      } else {
+        setApiFoods([]);
       }
     } catch (error) {
       console.error("Error searching global food:", error);

@@ -128,7 +128,29 @@ export const FOOD_DATABASE: FoodInfo[] = [
   { name: "Papa (Patata)", calories: 77, unit: "100g", category: "Verdura", benefits: "Vitamina C y B6." },
   { name: "Calabacín", calories: 17, unit: "100g", category: "Verdura", benefits: "Muy bajo en calorías." },
 
-  // --- FRUTAS (Existing + More) ---
+  // --- COMIDA CALLEJERA Y RÁPIDA ---
+  { name: "Pizza de Pepperoni", calories: 285, unit: "1 rebanada", category: "Rápida", benefits: "Energía rápida, rica en calcio." },
+  { name: "Pizza de Queso", calories: 250, unit: "1 rebanada", category: "Rápida", benefits: "Clásico favorito." },
+  { name: "Hot Dog Clásico", calories: 290, unit: "1 unidad", category: "Rápida", benefits: "Comida callejera icónica." },
+  { name: "Hamburguesa con Queso", calories: 350, unit: "1 unidad", category: "Rápida", benefits: "Proteína y carbohidratos." },
+  { name: "Papas Fritas", calories: 312, unit: "100g", category: "Rápida", benefits: "Acompañamiento crujiente." },
+  { name: "Taco de Res", calories: 210, unit: "1 unidad", category: "Rápida", benefits: "Sabor mexicano tradicional." },
+  { name: "Burrito de Pollo", calories: 450, unit: "1 unidad", category: "Rápida", benefits: "Comida completa en una tortilla." },
+  { name: "Nachos con Queso", calories: 306, unit: "100g", category: "Rápida", benefits: "Ideal para compartir." },
+  { name: "Donas Glaseadas", calories: 190, unit: "1 unidad", category: "Rápida", benefits: "Dulce placer ocasional." },
+  { name: "Pollo Frito (Pieza)", calories: 250, unit: "1 pieza", category: "Rápida", benefits: "Crujiente y jugoso." },
+  { name: "Pizza Hawaiana", calories: 260, unit: "1 rebanada", category: "Rápida", benefits: "Combinación dulce y salada." },
+  { name: "Hot Dog con Todo", calories: 420, unit: "1 unidad", category: "Rápida", benefits: "Con cebolla, chile y salsas." },
+  { name: "Hamburguesa Doble", calories: 580, unit: "1 unidad", category: "Rápida", benefits: "Alta en proteínas y calorías." },
+  { name: "Nuggets de Pollo (6 piezas)", calories: 280, unit: "6 unidades", category: "Rápida", benefits: "Favorito de los niños y adultos." },
+  { name: "Papas en Espiral", calories: 250, unit: "1 unidad", category: "Rápida", benefits: "Comida de feria divertida." },
+  { name: "Elote Loco", calories: 200, unit: "1 unidad", category: "Rápida", benefits: "Maíz con queso, mayonesa y chile." },
+  { name: "Churros con Chocolate", calories: 350, unit: "3 unidades", category: "Rápida", benefits: "Postre callejero clásico." },
+  { name: "Torta de Jamón", calories: 320, unit: "1 unidad", category: "Rápida", benefits: "Sándwich mexicano tradicional." },
+  { name: "Quesadilla de Asada", calories: 400, unit: "1 unidad", category: "Rápida", benefits: "Tortilla con queso y carne." },
+  { name: "Salchipapas", calories: 480, unit: "1 plato", category: "Rápida", benefits: "Mezcla de salchichas y papas fritas." },
+
+  // --- FRUTAS ---
   { name: "Manzana", calories: 52, unit: "100g", category: "Fruta", benefits: "Fibra y vitamina C." },
   { name: "Plátano", calories: 89, unit: "100g", category: "Fruta", benefits: "Potasio y energía." },
   { name: "Mango", calories: 60, unit: "100g", category: "Fruta", benefits: "Vitamina A y C." },
@@ -139,6 +161,26 @@ export const FOOD_DATABASE: FoodInfo[] = [
   { name: "Guayaba", calories: 68, unit: "100g", category: "Fruta", benefits: "Mucha vitamina C." },
   { name: "Nance", calories: 73, unit: "100g", category: "Fruta", benefits: "Tradicional hondureño." },
   { name: "Jocote", calories: 65, unit: "100g", category: "Fruta", benefits: "Rico en vitamina C." },
+  { name: "Fresa", calories: 32, unit: "100g", category: "Fruta", benefits: "Antioxidantes y baja en calorías." },
+  { name: "Uva", calories: 67, unit: "100g", category: "Fruta", benefits: "Energía natural y polifenoles." },
+  { name: "Naranja", calories: 47, unit: "100g", category: "Fruta", benefits: "Vitamina C pura." },
+  { name: "Limón", calories: 29, unit: "100g", category: "Fruta", benefits: "Desintoxicante natural." },
+  { name: "Pera", calories: 57, unit: "100g", category: "Fruta", benefits: "Rica en agua y fibra." },
+  { name: "Melón", calories: 34, unit: "100g", category: "Fruta", benefits: "Refrescante y diurético." },
+  { name: "Kiwi", calories: 61, unit: "100g", category: "Fruta", benefits: "Más vitamina C que la naranja." },
+  { name: "Arándano", calories: 57, unit: "100g", category: "Fruta", benefits: "Súper alimento para el cerebro." },
+  { name: "Cereza", calories: 50, unit: "100g", category: "Fruta", benefits: "Ayuda a dormir mejor (melatonina)." },
+  { name: "Granada", calories: 83, unit: "100g", category: "Fruta", benefits: "Potante antioxidante." },
+  { name: "Higo", calories: 74, unit: "100g", category: "Fruta", benefits: "Rico en fibra y minerales." },
+  { name: "Frambuesa", calories: 52, unit: "100g", category: "Fruta", benefits: "Alta en fibra y antioxidantes." },
+  { name: "Mora", calories: 43, unit: "100g", category: "Fruta", benefits: "Vitamina C y K." },
+  { name: "Ciruela", calories: 46, unit: "100g", category: "Fruta", benefits: "Buena para la digestión." },
+  { name: "Melocotón", calories: 39, unit: "100g", category: "Fruta", benefits: "Piel saludable y vitaminas." },
+  { name: "Albaricoque", calories: 48, unit: "100g", category: "Fruta", benefits: "Rico en betacarotenos." },
+  { name: "Guanábana", calories: 66, unit: "100g", category: "Fruta", benefits: "Propiedades medicinales tradicionales." },
+  { name: "Maracuyá", calories: 97, unit: "100g", category: "Fruta", benefits: "Relajante natural y vitamina C." },
+  { name: "Pitaya (Fruta del Dragón)", calories: 50, unit: "100g", category: "Fruta", benefits: "Exótica y rica en antioxidantes." },
+  { name: "Lichi", calories: 66, unit: "100g", category: "Fruta", benefits: "Dulce y rica en vitamina C." },
 
   // --- LÁCTEOS ---
   { name: "Leche Entera", calories: 61, unit: "100ml", category: "Lácteo", benefits: "Calcio y vitamina D." },
@@ -146,5 +188,70 @@ export const FOOD_DATABASE: FoodInfo[] = [
   { name: "Huevo", calories: 155, unit: "100g", category: "Proteína", benefits: "Proteína de referencia." },
   { name: "Mantequilla", calories: 717, unit: "100g", category: "Grasa", benefits: "Energía concentrada." },
 
-  // ... (Esta lista se expande dinámicamente con la búsqueda de IA) ...
+  // --- GOURMET Y PASTAS ---
+  { name: "Fettuccine Alfredo", calories: 415, unit: "100g", category: "Gourmet", benefits: "Clásico italiano cremoso y energético." },
+  { name: "Espagueti a la Boloñesa", calories: 158, unit: "100g", category: "Gourmet", benefits: "Rico en proteínas y carbohidratos." },
+  { name: "Lasaña de Carne", calories: 135, unit: "100g", category: "Gourmet", benefits: "Plato completo y reconfortante." },
+  { name: "Penne Arrabbiata", calories: 118, unit: "100g", category: "Gourmet", benefits: "Sabor picante y bajo en grasa." },
+  { name: "Ravioles de Espinaca", calories: 200, unit: "100g", category: "Gourmet", benefits: "Pasta rellena rica en hierro." },
+  { name: "Risotto de Champiñones", calories: 130, unit: "100g", category: "Gourmet", benefits: "Textura cremosa y sabor terroso." },
+  { name: "Salmón en Salsa de Eneldo", calories: 220, unit: "100g", category: "Gourmet", benefits: "Grasas saludables y alta cocina." },
+  { name: "Filete Mignon", calories: 267, unit: "100g", category: "Gourmet", benefits: "Corte de res premium y tierno." },
+  { name: "Magret de Pato", calories: 337, unit: "100g", category: "Gourmet", benefits: "Sabor intenso y gourmet." },
+  { name: "Langosta a la Thermidor", calories: 145, unit: "100g", category: "Gourmet", benefits: "Lujo marino con salsa cremosa." },
+  { name: "Ñoquis de Papa", calories: 130, unit: "100g", category: "Gourmet", benefits: "Pasta suave de papa." },
+  { name: "Pasta Carbonara", calories: 350, unit: "100g", category: "Gourmet", benefits: "Sabor ahumado con huevo y queso." },
+  { name: "Canelones de Pollo", calories: 160, unit: "100g", category: "Gourmet", benefits: "Pasta rellena horneada." },
+  { name: "Carpaccio de Res", calories: 120, unit: "100g", category: "Gourmet", benefits: "Entrada ligera y sofisticada." },
+  { name: "Ratatouille", calories: 52, unit: "100g", category: "Gourmet", benefits: "Guiso de verduras francés saludable." },
+
+  // --- PANES Y REPOSTERÍA ---
+  { name: "Baguette", calories: 248, unit: "100g", category: "Pan", benefits: "Clásico pan francés crujiente." },
+  { name: "Pan Ciabatta", calories: 250, unit: "100g", category: "Pan", benefits: "Pan italiano ideal para sándwiches." },
+  { name: "Pan de Centeno", calories: 259, unit: "100g", category: "Pan", benefits: "Rico en fibra y saciante." },
+  { name: "Pan de Masa Madre", calories: 230, unit: "100g", category: "Pan", benefits: "Fácil digestión y sabor complejo." },
+  { name: "Pan de Pita", calories: 275, unit: "100g", category: "Pan", benefits: "Pan plano versátil para rellenar." },
+  { name: "Pan de Molde Blanco", calories: 265, unit: "100g", category: "Pan", benefits: "Suave y práctico." },
+  { name: "Pan de Molde Integral", calories: 247, unit: "100g", category: "Pan", benefits: "Aporte extra de fibra." },
+  { name: "Croissant", calories: 406, unit: "1 unidad", category: "Pan", benefits: "Hojaldrado y rico en mantequilla." },
+  { name: "Bagel", calories: 250, unit: "1 unidad", category: "Pan", benefits: "Denso y perfecto para el desayuno." },
+  { name: "Muffin de Arándanos", calories: 380, unit: "1 unidad", category: "Pan", benefits: "Dulce con antioxidantes." },
+
+  // --- CHURRASCOS Y CORTES ---
+  { name: "Churrasco de Res", calories: 250, unit: "100g", category: "Carne", benefits: "Corte jugoso a la parrilla." },
+  { name: "Picanha (Tapa de Cuadril)", calories: 280, unit: "100g", category: "Carne", benefits: "Corte brasileño con capa de grasa sabrosa." },
+  { name: "Vacío de Res", calories: 230, unit: "100g", category: "Carne", benefits: "Corte fibroso y muy gustoso." },
+  { name: "Entraña Fina", calories: 210, unit: "100g", category: "Carne", benefits: "Sabor intenso y cocción rápida." },
+  { name: "Bife de Chorizo", calories: 260, unit: "100g", category: "Carne", benefits: "Corte clásico argentino (New York Strip)." },
+  { name: "Ojo de Bife", calories: 290, unit: "100g", category: "Carne", benefits: "Muy marmoleado y tierno." },
+  { name: "T-Bone Steak", calories: 250, unit: "100g", category: "Carne", benefits: "Dos cortes en uno (Lomo y New York)." },
+  { name: "Ribeye Steak", calories: 290, unit: "100g", category: "Carne", benefits: "Alto contenido de grasa intramuscular." },
+  
+  // --- TÉRMINOS DE COCCIÓN (Info) ---
+  { name: "Término: Rojo (Rare)", calories: 0, unit: "Info", category: "Término", benefits: "Sellado por fuera, centro rojo y frío (45-50°C)." },
+  { name: "Término: Medio Rojo (Med-Rare)", calories: 0, unit: "Info", category: "Término", benefits: "Centro rojo y tibio, el favorito de expertos (55°C)." },
+  { name: "Término: Medio (Medium)", calories: 0, unit: "Info", category: "Término", benefits: "Centro rosado, equilibrio entre jugo y cocción (60°C)." },
+  { name: "Término: Tres Cuartos (Med-Well)", calories: 0, unit: "Info", category: "Término", benefits: "Centro ligeramente rosado, más firme (65°C)." },
+  { name: "Término: Bien Cocido (Well-Done)", calories: 0, unit: "Info", category: "Término", benefits: "Cocción total, color café, menos jugoso (70°C+)." },
+
+  // --- GOLOSINAS Y DULCES ---
+  { name: "Gomitas de Dulce", calories: 320, unit: "100g", category: "Golosina", benefits: "Energía rápida, alta en azúcar." },
+  { name: "Chocolate con Leche", calories: 535, unit: "100g", category: "Golosina", benefits: "Rico en energía y magnesio." },
+  { name: "Caramelos Macizos", calories: 390, unit: "100g", category: "Golosina", benefits: "Azúcar pura." },
+  { name: "Malvaviscos", calories: 318, unit: "100g", category: "Golosina", benefits: "Textura suave y dulce." },
+  { name: "Paleta de Dulce", calories: 45, unit: "1 unidad", category: "Golosina", benefits: "Bocadillo dulce pequeño." },
+
+  // --- PLATOS TRADICIONALES ESPECÍFICOS ---
+  { name: "Chancletas (Güisquil Relleno)", calories: 180, unit: "1 unidad", category: "Latino", benefits: "Güisquil cocido con queso y horneado." },
+  { name: "Pastelitos de Arroz", calories: 210, unit: "1 unidad", category: "Latino", benefits: "Masa de arroz rellena de carne o vegetales." },
+  { name: "Chuchitos", calories: 150, unit: "1 unidad", category: "Latino", benefits: "Tamal pequeño de maíz con salsa y carne." },
+
+  // --- GRANOS Y SEMILLAS ADICIONALES ---
+  { name: "Semillas de Chía", calories: 486, unit: "100g", category: "Grano", benefits: "Súper fuente de Omega-3 y fibra." },
+  { name: "Trigo en Grano", calories: 339, unit: "100g", category: "Grano", benefits: "Base para harinas, rico en fibra." },
+  { name: "Linaza (Semillas)", calories: 534, unit: "100g", category: "Grano", benefits: "Excelente para la digestión y grasas saludables." },
+  { name: "Semillas de Girasol", calories: 584, unit: "100g", category: "Grano", benefits: "Ricas en vitamina E y minerales." },
+  { name: "Semillas de Calabaza", calories: 559, unit: "100g", category: "Grano", benefits: "Gran fuente de zinc y magnesio." },
+  { name: "Cebada", calories: 354, unit: "100g", category: "Grano", benefits: "Buena para el colesterol y fibra." },
+  { name: "Mijo", calories: 378, unit: "100g", category: "Grano", benefits: "Cereal sin gluten muy nutritivo." },
 ];
