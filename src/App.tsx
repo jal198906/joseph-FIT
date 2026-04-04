@@ -33,6 +33,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { format, addDays, startOfToday, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { auth, googleProvider, signInWithPopup, signOut, onAuthStateChanged, User } from './firebase';
 import { DIETS, EXERCISES, type Diet, type Exercise, type DailyPlan, type Challenge } from '@/src/types';
 import { FOOD_DATABASE, type FoodInfo } from '@/src/data/foods';
 import { cn } from '@/src/lib/utils';
@@ -92,6 +93,34 @@ export default function App() {
   // Recipe state
   const [randomRecipe, setRandomRecipe] = useState<any>(null);
   const [isLoadingRecipe, setIsLoadingRecipe] = useState(false);
+
+  // Auth state
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        setUserName(currentUser.displayName || 'Usuario');
+        setShowLanding(false);
+      }
+      setIsAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleGoogleLogin = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      if (result.user) {
+        setUserName(result.user.displayName || 'Usuario');
+        setShowLanding(false);
+      }
+    } catch (error) {
+      console.error("Error logging in with Google:", error);
+    }
+  };
 
   useEffect(() => {
     const savedName = localStorage.getItem('joseph_fit_name');
@@ -357,11 +386,22 @@ export default function App() {
     localStorage.setItem('joseph_fit_challenges', JSON.stringify(updatedChallenges));
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setUserName('');
+      localStorage.removeItem('joseph_fit_name');
+      setShowLanding(true);
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
+
   if (showLanding) {
-    return <LandingPage onStart={() => setShowLanding(false)} currentTime={currentTime} />;
+    return <LandingPage onStart={() => setShowLanding(false)} onGoogleLogin={handleGoogleLogin} currentTime={currentTime} />;
   }
 
-  if (!userName) {
+  if (!userName && !isAuthLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 relative">
         <div className="absolute top-6 right-6">
@@ -381,7 +421,7 @@ export default function App() {
           </div>
           <h1 className="text-3xl font-bold text-center text-slate-900 mb-2">¡Bienvenido!</h1>
           <p className="text-slate-500 text-center mb-8">
-            Para empezar tu proceso de dieta y ejercicio, dinos cómo te llamas.
+            Para empezar tu proceso de dieta y ejercicio, dinos cómo te llamas o inicia sesión.
           </p>
           
           <form onSubmit={handleSaveName} className="space-y-6">
@@ -404,6 +444,28 @@ export default function App() {
               Comenzar Proceso
             </button>
           </form>
+
+          <div className="relative my-8">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-200"></div>
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-white px-4 text-slate-400 font-bold">O también</span>
+            </div>
+          </div>
+
+          <button 
+            onClick={handleGoogleLogin}
+            className="w-full py-4 bg-white border-2 border-slate-100 text-slate-700 rounded-2xl font-bold text-lg hover:bg-slate-50 transition-all flex items-center justify-center gap-3 shadow-sm"
+          >
+            <svg className="w-6 h-6" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            Continuar con Google
+          </button>
         </motion.div>
       </div>
     );
@@ -439,12 +501,9 @@ export default function App() {
             <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
           </button>
           <button 
-            onClick={() => {
-              localStorage.removeItem('joseph_fit_name');
-              window.location.reload();
-            }}
+            onClick={handleLogout}
             className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors"
-            title="Cambiar nombre"
+            title="Cerrar sesión"
           >
             <Settings className="w-6 h-6" />
           </button>
