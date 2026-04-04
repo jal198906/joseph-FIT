@@ -46,6 +46,7 @@ import {
   updateDoc, 
   deleteDoc,
   Timestamp,
+  serverTimestamp,
   getDocFromServer
 } from 'firebase/firestore';
 import { DIETS, EXERCISES, type Diet, type Exercise, type DailyPlan, type Challenge } from '@/src/types';
@@ -158,6 +159,13 @@ function AppContent() {
   // Stopwatch state
   const [stopwatchTime, setStopwatchTime] = useState(0);
   const [isStopwatchRunning, setIsStopwatchRunning] = useState(false);
+
+  // Challenge Timer state
+  const [activeChallengeId, setActiveChallengeId] = useState<string | null>(null);
+  const [activeChallengeTime, setActiveChallengeTime] = useState(0);
+  const [isChallengeRunning, setIsChallengeRunning] = useState(false);
+  const [challengeInputs, setChallengeInputs] = useState<{[key: string]: string}>({});
+  const [showTimerAlert, setShowTimerAlert] = useState(false);
 
   const normalizeString = (str: string) => {
     return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -299,14 +307,26 @@ function AppContent() {
       
       if (result.user) {
         const userRef = doc(db, 'users', result.user.uid);
-        await setDoc(userRef, {
-          uid: result.user.uid,
-          displayName: result.user.displayName,
-          email: result.user.email,
-          photoURL: result.user.photoURL,
-          createdAt: Timestamp.now(),
-          lastLogin: Timestamp.now()
-        }, { merge: true });
+        const userDoc = await getDoc(userRef);
+        
+        if (!userDoc.exists()) {
+          // New user
+          await setDoc(userRef, {
+            uid: result.user.uid,
+            displayName: result.user.displayName,
+            email: result.user.email,
+            photoURL: result.user.photoURL,
+            createdAt: serverTimestamp(),
+            lastLogin: serverTimestamp()
+          });
+        } else {
+          // Existing user - only update lastLogin and profile info
+          await setDoc(userRef, {
+            displayName: result.user.displayName,
+            photoURL: result.user.photoURL,
+            lastLogin: serverTimestamp()
+          }, { merge: true });
+        }
 
         setUserName(result.user.displayName || 'Usuario');
         setShowLanding(false);
@@ -381,6 +401,25 @@ function AppContent() {
     }
     return () => clearInterval(interval);
   }, [isStopwatchRunning]);
+
+  // Challenge Timer effect
+  useEffect(() => {
+    let interval: any;
+    if (isChallengeRunning && activeChallengeTime > 0) {
+      interval = setInterval(() => {
+        setActiveChallengeTime(prevTime => {
+          if (prevTime <= 10) {
+            setIsChallengeRunning(false);
+            setActiveChallengeId(null);
+            setShowTimerAlert(true);
+            return 0;
+          }
+          return prevTime - 10;
+        });
+      }, 10);
+    }
+    return () => clearInterval(interval);
+  }, [isChallengeRunning, activeChallengeTime]);
 
   const formatStopwatchTime = (ms: number) => {
     const mins = Math.floor(ms / 60000);
@@ -1114,6 +1153,64 @@ function AppContent() {
                         <span className="text-xs font-medium text-slate-400">{ex.duration}</span>
                       </div>
                       <p className="text-sm text-slate-500 mb-3">{ex.description}</p>
+                      
+                      <div className="flex flex-wrap items-center gap-3 mb-4">
+                        <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
+                          <Timer className="w-3 h-3 text-slate-400" />
+                          <input 
+                            type="number" 
+                            placeholder="Min"
+                            className="w-10 bg-transparent text-xs font-bold outline-none text-slate-700"
+                            value={challengeInputs[ex.id] || ''}
+                            onChange={(e) => setChallengeInputs({...challengeInputs, [ex.id]: e.target.value})}
+                          />
+                          <span className="text-[10px] text-slate-400 font-bold uppercase">Min</span>
+                        </div>
+                        
+                        <button 
+                          onClick={() => {
+                            const mins = parseInt(challengeInputs[ex.id] || '0');
+                            if (mins > 0) {
+                              setActiveChallengeId(ex.id);
+                              setActiveChallengeTime(mins * 60 * 1000);
+                              setIsChallengeRunning(true);
+                            }
+                          }}
+                          disabled={isChallengeRunning && activeChallengeId === ex.id}
+                          className={cn(
+                            "px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2",
+                            activeChallengeId === ex.id 
+                              ? "bg-orange-500 text-white shadow-lg shadow-orange-200" 
+                              : "bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200"
+                          )}
+                        >
+                          {activeChallengeId === ex.id ? (
+                            <>
+                              <span className="animate-pulse">●</span>
+                              {formatStopwatchTime(activeChallengeTime)}
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-3 h-3" />
+                              Iniciar Reto
+                            </>
+                          )}
+                        </button>
+
+                        {activeChallengeId === ex.id && (
+                          <button 
+                            onClick={() => {
+                              setIsChallengeRunning(false);
+                              setActiveChallengeId(null);
+                              setActiveChallengeTime(0);
+                            }}
+                            className="p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-colors"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+
                       <div className="flex gap-2">
                         <span className="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-md uppercase">
                           {ex.category}
@@ -1174,6 +1271,63 @@ function AppContent() {
                               </span>
                             </div>
                             <p className="text-sm text-slate-600 italic">"{challenge.instructions}"</p>
+                            
+                            <div className="mt-4 flex flex-wrap items-center gap-3">
+                              <div className="flex items-center gap-2 bg-blue-50/50 px-3 py-2 rounded-xl border border-blue-100">
+                                <Timer className="w-3 h-3 text-blue-400" />
+                                <input 
+                                  type="number" 
+                                  placeholder="Min"
+                                  className="w-10 bg-transparent text-xs font-bold outline-none text-blue-700"
+                                  value={challengeInputs[challenge.id] || ''}
+                                  onChange={(e) => setChallengeInputs({...challengeInputs, [challenge.id]: e.target.value})}
+                                />
+                                <span className="text-[10px] text-blue-400 font-bold uppercase">Min</span>
+                              </div>
+                              
+                              <button 
+                                onClick={() => {
+                                  const mins = parseInt(challengeInputs[challenge.id] || '0');
+                                  if (mins > 0) {
+                                    setActiveChallengeId(challenge.id);
+                                    setActiveChallengeTime(mins * 60 * 1000);
+                                    setIsChallengeRunning(true);
+                                  }
+                                }}
+                                disabled={isChallengeRunning && activeChallengeId === challenge.id}
+                                className={cn(
+                                  "px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2",
+                                  activeChallengeId === challenge.id 
+                                    ? "bg-orange-500 text-white shadow-lg shadow-orange-200" 
+                                    : "bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200"
+                                )}
+                              >
+                                {activeChallengeId === challenge.id ? (
+                                  <>
+                                    <span className="animate-pulse">●</span>
+                                    {formatStopwatchTime(activeChallengeTime)}
+                                  </>
+                                ) : (
+                                  <>
+                                    <Play className="w-3 h-3" />
+                                    Iniciar Reto
+                                  </>
+                                )}
+                              </button>
+
+                              {activeChallengeId === challenge.id && (
+                                <button 
+                                  onClick={() => {
+                                    setIsChallengeRunning(false);
+                                    setActiveChallengeId(null);
+                                    setActiveChallengeTime(0);
+                                  }}
+                                  className="p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-colors"
+                                >
+                                  <RotateCcw className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </motion.div>
@@ -1573,6 +1727,29 @@ function AppContent() {
 
       {/* Reminder Modal */}
       <AnimatePresence>
+        {showTimerAlert && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white rounded-[2.5rem] p-8 max-w-sm w-full text-center shadow-2xl"
+            >
+              <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle2 className="w-10 h-10" />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">¡Reto Completado!</h3>
+              <p className="text-slate-500 mb-8 text-sm">Has terminado el tiempo definido para tu reto. ¡Buen trabajo!</p>
+              <button 
+                onClick={() => setShowTimerAlert(false)}
+                className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
+              >
+                Entendido
+              </button>
+            </motion.div>
+          </div>
+        )}
+
         {showReminderModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
             <motion.div 
