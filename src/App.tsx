@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Component } from 'react';
 import { 
   Dumbbell, 
   Utensils, 
@@ -33,14 +33,87 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { format, addDays, startOfToday, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { auth, googleProvider, signInWithPopup, signOut, onAuthStateChanged, User } from './firebase';
+import { auth, googleProvider, signInWithPopup, signOut, onAuthStateChanged, User, db } from './firebase';
+import { 
+  doc, 
+  setDoc, 
+  getDoc, 
+  collection, 
+  onSnapshot, 
+  query, 
+  where, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc,
+  Timestamp,
+  getDocFromServer
+} from 'firebase/firestore';
 import { DIETS, EXERCISES, type Diet, type Exercise, type DailyPlan, type Challenge } from '@/src/types';
 import { FOOD_DATABASE, type FoodInfo } from '@/src/data/foods';
 import { cn } from '@/src/lib/utils';
 import { GoogleGenAI } from "@google/genai";
 import LandingPage from '@/src/components/LandingPage';
 
+class ErrorBoundary extends Component<any, any> {
+  state = { hasError: false, errorInfo: '' };
+
+  constructor(props: any) {
+    super(props);
+  }
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, errorInfo: error.message };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("ErrorBoundary caught an error", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      let displayMessage = "Algo salió mal. Por favor, intenta de nuevo.";
+      try {
+        const parsed = JSON.parse(this.state.errorInfo);
+        if (parsed.error && parsed.error.includes("insufficient permissions")) {
+          displayMessage = "No tienes permisos para realizar esta acción. Por favor, inicia sesión de nuevo.";
+        }
+      } catch (e) {
+        // Not JSON, use default
+      }
+
+      return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+          <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 max-w-md w-full text-center">
+            <div className="bg-red-100 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+              <X className="text-red-600 w-8 h-8" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 mb-4">¡Ups! Algo salió mal</h2>
+            <p className="text-slate-600 mb-8">{displayMessage}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all"
+            >
+              Recargar Aplicación
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    const { children } = (this as any).props;
+    return children;
+  }
+}
+
 export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
+  );
+}
+
+function AppContent() {
   const [showLanding, setShowLanding] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [activeTab, setActiveTab] = useState<'today' | 'diets' | 'exercises' | 'fruits'>('today');
@@ -98,7 +171,69 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
+  enum OperationType {
+    CREATE = 'create',
+    UPDATE = 'update',
+    DELETE = 'delete',
+    LIST = 'list',
+    GET = 'get',
+    WRITE = 'write',
+  }
+
+  interface FirestoreErrorInfo {
+    error: string;
+    operationType: OperationType;
+    path: string | null;
+    authInfo: {
+      userId: string | undefined;
+      email: string | null | undefined;
+      emailVerified: boolean | undefined;
+      isAnonymous: boolean | undefined;
+      tenantId: string | null | undefined;
+      providerInfo: {
+        providerId: string;
+        displayName: string | null;
+        email: string | null;
+        photoUrl: string | null;
+      }[];
+    }
+  }
+
+  const handleFirestoreError = (error: unknown, operationType: OperationType, path: string | null) => {
+    const errInfo: FirestoreErrorInfo = {
+      error: error instanceof Error ? error.message : String(error),
+      authInfo: {
+        userId: auth.currentUser?.uid,
+        email: auth.currentUser?.email,
+        emailVerified: auth.currentUser?.emailVerified,
+        isAnonymous: auth.currentUser?.isAnonymous,
+        tenantId: auth.currentUser?.tenantId,
+        providerInfo: auth.currentUser?.providerData.map(provider => ({
+          providerId: provider.providerId,
+          displayName: provider.displayName,
+          email: provider.email,
+          photoUrl: provider.photoURL
+        })) || []
+      },
+      operationType,
+      path
+    }
+    console.error('Firestore Error: ', JSON.stringify(errInfo));
+    throw new Error(JSON.stringify(errInfo));
+  };
+
   useEffect(() => {
+    const testConnection = async () => {
+      try {
+        await getDocFromServer(doc(db, 'test', 'connection'));
+      } catch (error) {
+        if(error instanceof Error && error.message.includes('the client is offline')) {
+          console.error("Please check your Firebase configuration. ");
+        }
+      }
+    };
+    testConnection();
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
@@ -110,10 +245,62 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  // Sync Plans from Firestore
+  useEffect(() => {
+    if (!user) return;
+
+    const plansPath = `users/${user.uid}/plans`;
+    const q = query(collection(db, plansPath));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const plans: DailyPlan[] = [];
+      snapshot.forEach((doc) => {
+        plans.push(doc.data() as DailyPlan);
+      });
+      if (plans.length > 0) {
+        setDailyPlans(plans.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
+      }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, plansPath);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // Sync Challenges from Firestore
+  useEffect(() => {
+    if (!user) return;
+
+    const challengesPath = `users/${user.uid}/challenges`;
+    const q = query(collection(db, challengesPath));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const challenges: Challenge[] = [];
+      snapshot.forEach((doc) => {
+        challenges.push(doc.data() as Challenge);
+      });
+      setExtraChallenges(challenges.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, challengesPath);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
   const handleGoogleLogin = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       if (result.user) {
+        const userRef = doc(db, 'users', result.user.uid);
+        await setDoc(userRef, {
+          uid: result.user.uid,
+          displayName: result.user.displayName,
+          email: result.user.email,
+          photoURL: result.user.photoURL,
+          createdAt: Timestamp.now(),
+          lastLogin: Timestamp.now()
+        }, { merge: true });
+
         setUserName(result.user.displayName || 'Usuario');
         setShowLanding(false);
       }
@@ -184,11 +371,23 @@ export default function App() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${centis.toString().padStart(2, '0')}`;
   };
 
-  const handleSaveName = (e: React.FormEvent) => {
+  const handleSaveName = async (e: React.FormEvent) => {
     e.preventDefault();
     if (tempName.trim()) {
       setUserName(tempName.trim());
       localStorage.setItem('joseph_fit_name', tempName.trim());
+      
+      // If user is logged in, update their profile in Firestore
+      if (user) {
+        try {
+          const userRef = doc(db, 'users', user.uid);
+          await updateDoc(userRef, {
+            displayName: tempName.trim()
+          });
+        } catch (error) {
+          handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}`);
+        }
+      }
     }
   };
 
@@ -347,17 +546,29 @@ export default function App() {
       setIsLoadingRecipe(false);
     }
   };
-  const toggleTask = (date: string) => {
+  const toggleTask = async (date: string) => {
     const updatedPlans = dailyPlans.map(plan => 
       plan.date === date ? { ...plan, completed: !plan.completed } : plan
     );
     setDailyPlans(updatedPlans);
     localStorage.setItem('joseph_fit_plans', JSON.stringify(updatedPlans));
+
+    if (user) {
+      const plan = updatedPlans.find(p => p.date === date);
+      if (plan) {
+        try {
+          const planRef = doc(db, `users/${user.uid}/plans`, plan.date.replace(/\./g, '_'));
+          await setDoc(planRef, { ...plan, userId: user.uid }, { merge: true });
+        } catch (error) {
+          handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}/plans/${plan.date}`);
+        }
+      }
+    }
   };
 
   const todayPlan = dailyPlans.find(plan => isSameDay(new Date(plan.date), startOfToday()));
 
-  const handleAddChallenge = (e: React.FormEvent) => {
+  const handleAddChallenge = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!challengeName.trim() || !challengeInstructions.trim() || !challengeTime.trim()) return;
 
@@ -373,6 +584,15 @@ export default function App() {
     setExtraChallenges(updatedChallenges);
     localStorage.setItem('joseph_fit_challenges', JSON.stringify(updatedChallenges));
     
+    if (user) {
+      try {
+        const challengeRef = doc(db, `users/${user.uid}/challenges`, newChallenge.id);
+        await setDoc(challengeRef, { ...newChallenge, userId: user.uid });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}/challenges/${newChallenge.id}`);
+      }
+    }
+
     // Reset form
     setChallengeName('');
     setChallengeInstructions('');
@@ -380,10 +600,19 @@ export default function App() {
     setShowChallengeModal(false);
   };
 
-  const removeChallenge = (id: string) => {
+  const removeChallenge = async (id: string) => {
     const updatedChallenges = extraChallenges.filter(c => c.id !== id);
     setExtraChallenges(updatedChallenges);
     localStorage.setItem('joseph_fit_challenges', JSON.stringify(updatedChallenges));
+
+    if (user) {
+      try {
+        const challengeRef = doc(db, `users/${user.uid}/challenges`, id);
+        await deleteDoc(challengeRef);
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, `users/${user.uid}/challenges/${id}`);
+      }
+    }
   };
 
   const handleLogout = async () => {
