@@ -150,11 +150,14 @@ function AppContent() {
   // Custom Diets state
   const [customDiets, setCustomDiets] = useState<Diet[]>([]);
   const [showDietModal, setShowDietModal] = useState(false);
+  const [editingDietId, setEditingDietId] = useState<string | null>(null);
   const [newDiet, setNewDiet] = useState<Partial<Diet>>({
     name: '',
     description: '',
     type: 'balanced',
     benefits: [],
+    exerciseIds: [],
+    challengeIds: [],
     meals: {
       breakfast: '',
       lunch: '',
@@ -467,20 +470,37 @@ function AppContent() {
   const handleAddDiet = (e: React.FormEvent) => {
     e.preventDefault();
     if (newDiet.name && newDiet.description) {
-      const dietToAdd: Diet = {
-        ...newDiet as Diet,
-        id: `custom-${Date.now()}`,
-        benefits: newDiet.benefits?.length ? newDiet.benefits : ['Personalizada']
-      };
-      const updatedDiets = [...customDiets, dietToAdd];
-      setCustomDiets(updatedDiets);
-      localStorage.setItem('joseph_fit_custom_diets', JSON.stringify(updatedDiets));
+      if (editingDietId) {
+        const updatedDiets = customDiets.map(d => 
+          d.id === editingDietId ? { ...d, ...newDiet } as Diet : d
+        );
+        setCustomDiets(updatedDiets);
+        localStorage.setItem('joseph_fit_custom_diets', JSON.stringify(updatedDiets));
+        if (selectedDiet.id === editingDietId) {
+          setSelectedDiet({ ...selectedDiet, ...newDiet } as Diet);
+        }
+      } else {
+        const dietToAdd: Diet = {
+          ...newDiet as Diet,
+          id: `custom-${Date.now()}`,
+          benefits: newDiet.benefits?.length ? newDiet.benefits : ['Personalizada'],
+          exerciseIds: newDiet.exerciseIds || [],
+          challengeIds: newDiet.challengeIds || []
+        };
+        const updatedDiets = [...customDiets, dietToAdd];
+        setCustomDiets(updatedDiets);
+        localStorage.setItem('joseph_fit_custom_diets', JSON.stringify(updatedDiets));
+      }
+      
       setShowDietModal(false);
+      setEditingDietId(null);
       setNewDiet({
         name: '',
         description: '',
         type: 'balanced',
         benefits: [],
+        exerciseIds: [],
+        challengeIds: [],
         meals: {
           breakfast: '',
           lunch: '',
@@ -489,6 +509,21 @@ function AppContent() {
         }
       });
     }
+  };
+
+  const removeDiet = (id: string) => {
+    const updatedDiets = customDiets.filter(d => d.id !== id);
+    setCustomDiets(updatedDiets);
+    localStorage.setItem('joseph_fit_custom_diets', JSON.stringify(updatedDiets));
+    if (selectedDiet.id === id) {
+      setSelectedDiet(DIETS[0]);
+    }
+  };
+
+  const startEditDiet = (diet: Diet) => {
+    setNewDiet(diet);
+    setEditingDietId(diet.id);
+    setShowDietModal(true);
   };
 
   const allDiets = [...DIETS, ...customDiets];
@@ -1141,11 +1176,35 @@ function AppContent() {
                   <div 
                     key={diet.id}
                     className={cn(
-                      "bg-white rounded-3xl p-6 border-2 transition-all cursor-pointer",
+                      "bg-white rounded-3xl p-6 border-2 transition-all cursor-pointer relative group",
                       selectedDiet.id === diet.id ? "border-blue-600 ring-4 ring-blue-50" : "border-slate-100 hover:border-slate-200"
                     )}
                     onClick={() => setSelectedDiet(diet)}
                   >
+                    {customDiets.some(d => d.id === diet.id) && (
+                      <div className="absolute top-4 right-4 flex gap-2 transition-all">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startEditDiet(diet);
+                          }}
+                          className="p-1 text-slate-400 hover:text-blue-600"
+                          title="Editar dieta"
+                        >
+                          <Settings className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeDiet(diet.id);
+                          }}
+                          className="p-1 text-slate-400 hover:text-red-500"
+                          title="Eliminar dieta"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between mb-4">
                       <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full uppercase">
                         {diet.type}
@@ -1155,7 +1214,7 @@ function AppContent() {
                     <h3 className="text-xl font-bold text-slate-900 mb-2">{diet.name}</h3>
                     <p className="text-slate-600 text-sm mb-4">{diet.description}</p>
                     
-                    <div className="space-y-3 bg-slate-50 p-4 rounded-2xl">
+                    <div className="space-y-3 bg-slate-50 p-4 rounded-2xl mb-4">
                       <p className="text-xs font-bold text-slate-400 uppercase">Menú Sugerido</p>
                       <div className="grid grid-cols-2 gap-4 text-xs">
                         <div>
@@ -1176,6 +1235,30 @@ function AppContent() {
                         </div>
                       </div>
                     </div>
+
+                    {(diet.exerciseIds?.length || diet.challengeIds?.length) ? (
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Actividades Vinculadas</p>
+                        <div className="flex flex-wrap gap-2">
+                          {diet.exerciseIds?.map(id => {
+                            const ex = exerciseList.find(e => e.id === id);
+                            return ex ? (
+                              <span key={id} className="px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-lg border border-blue-100 flex items-center gap-1">
+                                <Dumbbell className="w-2 h-2" /> {ex.name}
+                              </span>
+                            ) : null;
+                          })}
+                          {diet.challengeIds?.map(id => {
+                            const ch = extraChallenges.find(c => c.id === id);
+                            return ch ? (
+                              <span key={id} className="px-2 py-1 bg-orange-50 text-orange-600 text-[10px] font-bold rounded-lg border border-orange-100 flex items-center gap-1">
+                                <Flame className="w-2 h-2" /> {ch.name}
+                              </span>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -1640,7 +1723,24 @@ function AppContent() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setShowDietModal(false)}
+              onClick={() => {
+                setShowDietModal(false);
+                setEditingDietId(null);
+                setNewDiet({
+                  name: '',
+                  description: '',
+                  type: 'balanced',
+                  benefits: [],
+                  exerciseIds: [],
+                  challengeIds: [],
+                  meals: {
+                    breakfast: '',
+                    lunch: '',
+                    dinner: '',
+                    snack: ''
+                  }
+                });
+              }}
               className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
             />
             <motion.div 
@@ -1650,7 +1750,24 @@ function AppContent() {
               className="bg-white w-full max-w-md rounded-[2.5rem] p-8 relative z-10 shadow-2xl my-auto"
             >
               <button 
-                onClick={() => setShowDietModal(false)}
+                onClick={() => {
+                  setShowDietModal(false);
+                  setEditingDietId(null);
+                  setNewDiet({
+                    name: '',
+                    description: '',
+                    type: 'balanced',
+                    benefits: [],
+                    exerciseIds: [],
+                    challengeIds: [],
+                    meals: {
+                      breakfast: '',
+                      lunch: '',
+                      dinner: '',
+                      snack: ''
+                    }
+                  });
+                }}
                 className="absolute top-6 right-6 p-2 hover:bg-slate-100 rounded-full transition-colors"
               >
                 <X className="w-6 h-6 text-slate-400" />
@@ -1658,12 +1775,16 @@ function AppContent() {
 
               <div className="space-y-6">
                 <div className="w-16 h-16 bg-green-600 rounded-2xl flex items-center justify-center mx-auto rotate-3 shadow-lg shadow-green-200">
-                  <Utensils className="text-white w-8 h-8" />
+                  {editingDietId ? <Settings className="text-white w-8 h-8" /> : <Utensils className="text-white w-8 h-8" />}
                 </div>
                 
                 <div className="text-center">
-                  <h3 className="text-2xl font-bold text-slate-900">Nueva Dieta Personalizada</h3>
-                  <p className="text-slate-500 text-sm mt-1">Define tu propio plan alimenticio</p>
+                  <h3 className="text-2xl font-bold text-slate-900">
+                    {editingDietId ? 'Editar Dieta' : 'Nueva Dieta Personalizada'}
+                  </h3>
+                  <p className="text-slate-500 text-sm mt-1">
+                    {editingDietId ? 'Modifica los detalles de tu dieta' : 'Define tu propio plan alimenticio'}
+                  </p>
                 </div>
 
                 <form onSubmit={handleAddDiet} className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
@@ -1756,11 +1877,67 @@ function AppContent() {
                     />
                   </div>
 
+                  <div className="space-y-3 pt-2">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase ml-2">Vincular Ejercicios</p>
+                    <div className="flex flex-wrap gap-2">
+                      {exerciseList.map(ex => (
+                        <button
+                          key={ex.id}
+                          type="button"
+                          onClick={() => {
+                            const current = newDiet.exerciseIds || [];
+                            const updated = current.includes(ex.id) 
+                              ? current.filter(id => id !== ex.id)
+                              : [...current, ex.id];
+                            setNewDiet({...newDiet, exerciseIds: updated});
+                          }}
+                          className={cn(
+                            "px-3 py-2 rounded-xl text-[10px] font-bold transition-all border flex items-center gap-2",
+                            newDiet.exerciseIds?.includes(ex.id)
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : "bg-white text-slate-500 border-slate-100 hover:border-slate-200"
+                          )}
+                        >
+                          <Dumbbell className="w-3 h-3" />
+                          {ex.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 pt-2">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase ml-2">Vincular Retos</p>
+                    <div className="flex flex-wrap gap-2">
+                      {extraChallenges.map(ch => (
+                        <button
+                          key={ch.id}
+                          type="button"
+                          onClick={() => {
+                            const current = newDiet.challengeIds || [];
+                            const updated = current.includes(ch.id) 
+                              ? current.filter(id => id !== ch.id)
+                              : [...current, ch.id];
+                            setNewDiet({...newDiet, challengeIds: updated});
+                          }}
+                          className={cn(
+                            "px-3 py-2 rounded-xl text-[10px] font-bold transition-all border flex items-center gap-2",
+                            newDiet.challengeIds?.includes(ch.id)
+                              ? "bg-orange-500 text-white border-orange-500"
+                              : "bg-white text-slate-500 border-slate-100 hover:border-slate-200"
+                          )}
+                        >
+                          <Flame className="w-3 h-3" />
+                          {ch.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <button 
                     type="submit"
                     className="w-full py-4 bg-green-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-green-200 hover:bg-green-700 transition-all mt-4"
                   >
-                    Guardar Dieta
+                    {editingDietId ? 'Guardar Cambios' : 'Crear Dieta'}
                   </button>
                 </form>
               </div>

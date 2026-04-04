@@ -10,6 +10,8 @@ export interface Diet {
     snack: string;
   };
   type: 'weight-loss' | 'muscle-gain' | 'balanced' | 'keto' | 'vegan';
+  exerciseIds?: string[];
+  challengeIds?: string[];
 }
 
 export interface Exercise {
