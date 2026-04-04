@@ -93,15 +93,6 @@ export default function App() {
   const [randomRecipe, setRandomRecipe] = useState<any>(null);
   const [isLoadingRecipe, setIsLoadingRecipe] = useState(false);
 
-  // Scanner state
-  const [showScanner, setShowScanner] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [scanResult, setScanResult] = useState<any>(null);
-  const [scanError, setScanError] = useState<string | null>(null);
-
-  const cameraInputRef = React.useRef<HTMLInputElement>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-
   useEffect(() => {
     const savedName = localStorage.getItem('joseph_fit_name');
     if (savedName) {
@@ -336,97 +327,6 @@ export default function App() {
   };
 
   const todayPlan = dailyPlans.find(plan => isSameDay(new Date(plan.date), startOfToday()));
-
-  const handleScanImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsAnalyzing(true);
-    setScanResult(null);
-    setScanError(null);
-
-    try {
-      // Compress and resize image before sending to AI
-      const compressImage = (file: File): Promise<string> => {
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(file);
-          reader.onload = (event) => {
-            const img = new Image();
-            img.src = event.target?.result as string;
-            img.onload = () => {
-              const canvas = document.createElement('canvas');
-              const MAX_WIDTH = 800;
-              const MAX_HEIGHT = 800;
-              let width = img.width;
-              let height = img.height;
-
-              if (width > height) {
-                if (width > MAX_WIDTH) {
-                  height *= MAX_WIDTH / width;
-                  width = MAX_WIDTH;
-                }
-              } else {
-                if (height > MAX_HEIGHT) {
-                  width *= MAX_HEIGHT / height;
-                  height = MAX_HEIGHT;
-                }
-              }
-
-              canvas.width = width;
-              canvas.height = height;
-              const ctx = canvas.getContext('2d');
-              ctx?.drawImage(img, 0, 0, width, height);
-              
-              // Get base64 string with lower quality to reduce payload size
-              const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-              resolve(dataUrl.split(',')[1]);
-            };
-            img.onerror = () => reject(new Error("Error al cargar la imagen"));
-          };
-          reader.onerror = () => reject(new Error("Error al leer el archivo"));
-        });
-      };
-
-      const base64Data = await compressImage(file);
-      
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error("API Key de Gemini no configurada");
-      }
-
-      const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview", 
-        contents: [
-          {
-            parts: [
-              { text: "Analiza esta imagen de comida. Identifica el plato o alimento, estima las calorías por porción estándar y menciona 2 beneficios nutricionales. Responde estrictamente en formato JSON: { \"name\": \"Nombre\", \"calories\": 0, \"benefits\": \"Beneficio 1, Beneficio 2\" }" },
-              { inlineData: { data: base64Data, mimeType: "image/jpeg" } }
-            ]
-          }
-        ],
-        config: {
-          responseMimeType: "application/json"
-        }
-      });
-
-      const text = response.text;
-      if (!text) throw new Error("No se recibió respuesta de la IA");
-      
-      // Clean text in case model adds markdown blocks
-      const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
-      const result = JSON.parse(cleanJson);
-      setScanResult(result);
-    } catch (error) {
-      console.error("Error analyzing image:", error);
-      setScanError("Hubo un problema al analizar la imagen. Por favor, intenta de nuevo con una imagen más clara.");
-    } finally {
-      setIsAnalyzing(false);
-      // Reset input value so same file can be selected again
-      e.target.value = '';
-    }
-  };
 
   const handleAddChallenge = (e: React.FormEvent) => {
     e.preventDefault();
@@ -978,48 +878,9 @@ export default function App() {
                   placeholder="Busca un alimento (ej. Baleada, Pollo chuco, Frijoles...)"
                   value={foodSearch}
                   onChange={(e) => setFoodSearch(e.target.value)}
-                  className="w-full pl-6 pr-32 py-5 bg-white border border-slate-200 rounded-[2rem] outline-none focus:border-blue-600 transition-all shadow-lg shadow-slate-100 text-lg"
+                  className="w-full px-6 py-5 bg-white border border-slate-200 rounded-[2rem] outline-none focus:border-blue-600 transition-all shadow-lg shadow-slate-100 text-lg"
                 />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-2">
-                  <button 
-                    onClick={() => {
-                      setShowScanner(true);
-                      setTimeout(() => cameraInputRef.current?.click(), 100);
-                    }}
-                    className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center hover:bg-blue-700 transition-all shadow-md shadow-blue-100"
-                    title="Escanear con cámara"
-                  >
-                    <Scan className="w-5 h-5" />
-                  </button>
-                  <button 
-                    onClick={() => {
-                      setShowScanner(true);
-                      setTimeout(() => fileInputRef.current?.click(), 100);
-                    }}
-                    className="w-12 h-12 bg-slate-100 text-slate-600 rounded-full flex items-center justify-center hover:bg-slate-200 transition-all"
-                    title="Subir imagen"
-                  >
-                    <Upload className="w-5 h-5" />
-                  </button>
-                </div>
               </div>
-
-              {/* Hidden Inputs */}
-              <input 
-                type="file" 
-                accept="image/*" 
-                capture="environment"
-                ref={cameraInputRef}
-                onChange={handleScanImage}
-                className="hidden"
-              />
-              <input 
-                type="file" 
-                accept="image/*" 
-                ref={fileInputRef}
-                onChange={handleScanImage}
-                className="hidden"
-              />
 
               <div className="grid gap-4">
                 {foodSearch.trim() !== '' ? (
@@ -1165,110 +1026,6 @@ export default function App() {
           <span className="text-[10px] font-bold uppercase">Ejercicios</span>
         </button>
       </nav>
-
-      {/* Scanner Modal */}
-      <AnimatePresence>
-        {showScanner && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => {
-                if (!isAnalyzing) setShowScanner(false);
-              }}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 relative z-10 shadow-2xl overflow-hidden"
-            >
-              <button 
-                onClick={() => setShowScanner(false)}
-                className="absolute top-6 right-6 p-2 hover:bg-slate-100 rounded-full transition-colors"
-              >
-                <X className="w-6 h-6 text-slate-400" />
-              </button>
-
-              <div className="text-center space-y-6">
-                <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center mx-auto rotate-3 shadow-lg shadow-blue-200">
-                  <Camera className="text-white w-10 h-10" />
-                </div>
-                
-                <div>
-                  <h3 className="text-2xl font-bold text-slate-900">Escáner IA</h3>
-                  <p className="text-slate-500 text-sm mt-2">
-                    Toma una foto de tu comida y Joseph-FIT la analizará por ti.
-                  </p>
-                </div>
-
-                {!scanResult && !isAnalyzing && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <button 
-                        onClick={() => cameraInputRef.current?.click()}
-                        className="py-5 bg-blue-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all flex flex-col items-center gap-2"
-                      >
-                        <Camera className="w-6 h-6" />
-                        Cámara
-                      </button>
-                      <button 
-                        onClick={() => fileInputRef.current?.click()}
-                        className="py-5 bg-slate-800 text-white rounded-2xl font-bold text-sm shadow-lg shadow-slate-200 hover:bg-slate-900 transition-all flex flex-col items-center gap-2"
-                      >
-                        <Upload className="w-6 h-6" />
-                        Galería
-                      </button>
-                    </div>
-                    {scanError && (
-                      <div className="p-4 bg-red-50 border border-red-100 rounded-2xl">
-                        <p className="text-xs text-red-600 font-medium">{scanError}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {isAnalyzing && (
-                  <div className="py-8 space-y-4">
-                    <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto" />
-                    <p className="text-blue-600 font-bold animate-pulse">Analizando tu plato...</p>
-                  </div>
-                )}
-
-                {scanResult && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-slate-50 p-6 rounded-3xl border border-slate-100 text-left space-y-4"
-                  >
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xl font-bold text-slate-900">{scanResult.name}</h4>
-                      <div className="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold">
-                        {scanResult.calories} Cal
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-xs font-bold text-slate-400 uppercase">Beneficios</p>
-                      <p className="text-sm text-slate-600 leading-relaxed">{scanResult.benefits}</p>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        setScanResult(null);
-                        setShowScanner(false);
-                      }}
-                      className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold text-sm mt-4"
-                    >
-                      Cerrar y Guardar
-                    </button>
-                  </motion.div>
-                )}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       {/* Diet Modal */}
       <AnimatePresence>
