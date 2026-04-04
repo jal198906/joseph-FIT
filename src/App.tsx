@@ -1233,17 +1233,17 @@ function AppContent() {
               <div className="grid gap-4">
                 {exerciseList.map((ex) => (
                   <div key={ex.id} className="bg-white p-6 rounded-3xl border border-slate-100 flex items-start gap-4 relative group">
-                    <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                    <div className="absolute top-4 right-4 flex gap-2 transition-all">
                       <button 
                         onClick={() => startEditExercise(ex)}
-                        className="p-1 text-slate-300 hover:text-blue-600"
+                        className="p-1 text-slate-400 hover:text-blue-600"
                         title="Editar ejercicio"
                       >
                         <Settings className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={() => removeExercise(ex.id)}
-                        className="p-1 text-slate-300 hover:text-red-500"
+                        className="p-1 text-slate-400 hover:text-red-500"
                         title="Eliminar ejercicio"
                       >
                         <X className="w-4 h-4" />
@@ -1370,17 +1370,17 @@ function AppContent() {
                         key={challenge.id} 
                         className="bg-white p-6 rounded-3xl border border-blue-100 shadow-sm relative group"
                       >
-                        <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                        <div className="absolute top-4 right-4 flex gap-2 transition-all">
                           <button 
                             onClick={() => startEditChallenge(challenge)}
-                            className="p-1 text-slate-300 hover:text-blue-600"
+                            className="p-1 text-slate-400 hover:text-blue-600"
                             title="Editar reto"
                           >
                             <Settings className="w-4 h-4" />
                           </button>
                           <button 
                             onClick={() => removeChallenge(challenge.id)}
-                            className="p-1 text-slate-300 hover:text-red-500"
+                            className="p-1 text-slate-400 hover:text-red-500"
                             title="Eliminar reto"
                           >
                             <X className="w-4 h-4" />
