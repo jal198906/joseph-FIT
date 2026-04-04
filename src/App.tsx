@@ -121,8 +121,19 @@ function AppContent() {
   const [selectedDiet, setSelectedDiet] = useState<Diet>(DIETS[0]);
   const [dailyPlans, setDailyPlans] = useState<DailyPlan[]>([]);
   const [extraChallenges, setExtraChallenges] = useState<Challenge[]>([]);
+  const [exerciseList, setExerciseList] = useState<Exercise[]>(EXERCISES);
+  const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
+  const [showExerciseModal, setShowExerciseModal] = useState(false);
+  const [newExercise, setNewExercise] = useState<Partial<Exercise>>({
+    name: '',
+    description: '',
+    duration: '',
+    intensity: 'medium',
+    category: 'cardio'
+  });
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [showChallengeModal, setShowChallengeModal] = useState(false);
+  const [editingChallengeId, setEditingChallengeId] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [tempName, setTempName] = useState('');
   
@@ -382,6 +393,11 @@ function AppContent() {
     if (savedDailyTasks) {
       setDailyTasks(JSON.parse(savedDailyTasks));
     }
+
+    const savedExercises = localStorage.getItem('joseph_fit_exercises');
+    if (savedExercises) {
+      setExerciseList(JSON.parse(savedExercises));
+    }
   }, []);
 
   useEffect(() => {
@@ -629,24 +645,49 @@ function AppContent() {
     e.preventDefault();
     if (!challengeName.trim() || !challengeInstructions.trim() || !challengeTime.trim()) return;
 
-    const newChallenge: Challenge = {
-      id: `challenge-${Date.now()}`,
-      name: challengeName.trim(),
-      instructions: challengeInstructions.trim(),
-      duration: challengeTime.trim(),
-      createdAt: new Date().toISOString()
-    };
+    if (editingChallengeId) {
+      // Update existing challenge
+      const updatedChallenges = extraChallenges.map(c => 
+        c.id === editingChallengeId 
+          ? { ...c, name: challengeName.trim(), instructions: challengeInstructions.trim(), duration: challengeTime.trim() }
+          : c
+      );
+      setExtraChallenges(updatedChallenges);
+      localStorage.setItem('joseph_fit_challenges', JSON.stringify(updatedChallenges));
 
-    const updatedChallenges = [newChallenge, ...extraChallenges];
-    setExtraChallenges(updatedChallenges);
-    localStorage.setItem('joseph_fit_challenges', JSON.stringify(updatedChallenges));
-    
-    if (user) {
-      try {
-        const challengeRef = doc(db, `users/${user.uid}/challenges`, newChallenge.id);
-        await setDoc(challengeRef, { ...newChallenge, userId: user.uid });
-      } catch (error) {
-        handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}/challenges/${newChallenge.id}`);
+      if (user) {
+        try {
+          const challengeRef = doc(db, `users/${user.uid}/challenges`, editingChallengeId);
+          await updateDoc(challengeRef, {
+            name: challengeName.trim(),
+            instructions: challengeInstructions.trim(),
+            duration: challengeTime.trim()
+          });
+        } catch (error) {
+          handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}/challenges/${editingChallengeId}`);
+        }
+      }
+    } else {
+      // Create new challenge
+      const newChallenge: Challenge = {
+        id: `challenge-${Date.now()}`,
+        name: challengeName.trim(),
+        instructions: challengeInstructions.trim(),
+        duration: challengeTime.trim(),
+        createdAt: new Date().toISOString()
+      };
+
+      const updatedChallenges = [newChallenge, ...extraChallenges];
+      setExtraChallenges(updatedChallenges);
+      localStorage.setItem('joseph_fit_challenges', JSON.stringify(updatedChallenges));
+      
+      if (user) {
+        try {
+          const challengeRef = doc(db, `users/${user.uid}/challenges`, newChallenge.id);
+          await setDoc(challengeRef, { ...newChallenge, userId: user.uid });
+        } catch (error) {
+          handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}/challenges/${newChallenge.id}`);
+        }
       }
     }
 
@@ -654,7 +695,59 @@ function AppContent() {
     setChallengeName('');
     setChallengeInstructions('');
     setChallengeTime('');
+    setEditingChallengeId(null);
     setShowChallengeModal(false);
+  };
+
+  const startEditChallenge = (challenge: Challenge) => {
+    setChallengeName(challenge.name);
+    setChallengeInstructions(challenge.instructions);
+    setChallengeTime(challenge.duration);
+    setEditingChallengeId(challenge.id);
+    setShowChallengeModal(true);
+  };
+
+  const removeExercise = (id: string) => {
+    const updatedExercises = exerciseList.filter(ex => ex.id !== id);
+    setExerciseList(updatedExercises);
+    localStorage.setItem('joseph_fit_exercises', JSON.stringify(updatedExercises));
+  };
+
+  const handleAddExercise = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newExercise.name || !newExercise.description || !newExercise.duration) return;
+
+    if (editingExerciseId) {
+      const updatedExercises = exerciseList.map(ex => 
+        ex.id === editingExerciseId ? { ...ex, ...newExercise } as Exercise : ex
+      );
+      setExerciseList(updatedExercises);
+      localStorage.setItem('joseph_fit_exercises', JSON.stringify(updatedExercises));
+    } else {
+      const exerciseToAdd: Exercise = {
+        ...newExercise as Exercise,
+        id: `custom-ex-${Date.now()}`
+      };
+      const updatedExercises = [...exerciseList, exerciseToAdd];
+      setExerciseList(updatedExercises);
+      localStorage.setItem('joseph_fit_exercises', JSON.stringify(updatedExercises));
+    }
+
+    setShowExerciseModal(false);
+    setEditingExerciseId(null);
+    setNewExercise({
+      name: '',
+      description: '',
+      duration: '',
+      intensity: 'medium',
+      category: 'cardio'
+    });
+  };
+
+  const startEditExercise = (ex: Exercise) => {
+    setNewExercise(ex);
+    setEditingExerciseId(ex.id);
+    setShowExerciseModal(true);
   };
 
   const removeChallenge = async (id: string) => {
@@ -1138,8 +1231,24 @@ function AppContent() {
               </div>
 
               <div className="grid gap-4">
-                {EXERCISES.map((ex) => (
-                  <div key={ex.id} className="bg-white p-6 rounded-3xl border border-slate-100 flex items-start gap-4">
+                {exerciseList.map((ex) => (
+                  <div key={ex.id} className="bg-white p-6 rounded-3xl border border-slate-100 flex items-start gap-4 relative group">
+                    <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                      <button 
+                        onClick={() => startEditExercise(ex)}
+                        className="p-1 text-slate-300 hover:text-blue-600"
+                        title="Editar ejercicio"
+                      >
+                        <Settings className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => removeExercise(ex.id)}
+                        className="p-1 text-slate-300 hover:text-red-500"
+                        title="Eliminar ejercicio"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
                     <div className={cn(
                       "p-3 rounded-2xl",
                       ex.intensity === 'high' ? "bg-red-50 text-red-600" : 
@@ -1232,12 +1341,20 @@ function AppContent() {
                 <div className="relative z-10">
                   <h3 className="text-lg font-bold mb-2">¿Quieres un reto extra?</h3>
                   <p className="text-blue-100 text-sm mb-4">Crea tus propios retos personalizados para complementar tu rutina.</p>
-                  <button 
-                    onClick={() => setShowChallengeModal(true)}
-                    className="bg-white text-blue-600 px-6 py-2 rounded-xl font-bold text-sm hover:bg-blue-50 transition-colors"
-                  >
-                    Crear Reto Extra
-                  </button>
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => setShowChallengeModal(true)}
+                      className="bg-white text-blue-600 px-6 py-2 rounded-xl font-bold text-sm hover:bg-blue-50 transition-colors"
+                    >
+                      Crear Reto Extra
+                    </button>
+                    <button 
+                      onClick={() => setShowExerciseModal(true)}
+                      className="bg-blue-500 text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-blue-400 transition-colors border border-blue-400"
+                    >
+                      Añadir Ejercicio
+                    </button>
+                  </div>
                 </div>
                 <Flame className="absolute -bottom-4 -right-4 w-32 h-32 text-blue-500/20" />
               </div>
@@ -1253,12 +1370,22 @@ function AppContent() {
                         key={challenge.id} 
                         className="bg-white p-6 rounded-3xl border border-blue-100 shadow-sm relative group"
                       >
-                        <button 
-                          onClick={() => removeChallenge(challenge.id)}
-                          className="absolute top-4 right-4 p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
+                        <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                          <button 
+                            onClick={() => startEditChallenge(challenge)}
+                            className="p-1 text-slate-300 hover:text-blue-600"
+                            title="Editar reto"
+                          >
+                            <Settings className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => removeChallenge(challenge.id)}
+                            className="p-1 text-slate-300 hover:text-red-500"
+                            title="Eliminar reto"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
                         <div className="flex items-start gap-4">
                           <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
                             <Flame className="w-6 h-6" />
@@ -1642,6 +1769,127 @@ function AppContent() {
         )}
       </AnimatePresence>
 
+      {/* Exercise Modal */}
+      <AnimatePresence>
+        {showExerciseModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                setShowExerciseModal(false);
+                setEditingExerciseId(null);
+                setNewExercise({
+                  name: '',
+                  description: '',
+                  duration: '',
+                  intensity: 'medium',
+                  category: 'cardio'
+                });
+              }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 relative z-10 shadow-2xl"
+            >
+              <button 
+                onClick={() => {
+                  setShowExerciseModal(false);
+                  setEditingExerciseId(null);
+                  setNewExercise({
+                    name: '',
+                    description: '',
+                    duration: '',
+                    intensity: 'medium',
+                    category: 'cardio'
+                  });
+                }}
+                className="absolute top-6 right-6 p-2 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6 text-slate-400" />
+              </button>
+
+              <div className="space-y-6">
+                <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto rotate-3 shadow-lg shadow-blue-200">
+                  {editingExerciseId ? <Settings className="text-white w-8 h-8" /> : <Dumbbell className="text-white w-8 h-8" />}
+                </div>
+                
+                <div className="text-center">
+                  <h3 className="text-2xl font-bold text-slate-900">
+                    {editingExerciseId ? 'Editar Ejercicio' : 'Nuevo Ejercicio'}
+                  </h3>
+                  <p className="text-slate-500 text-sm mt-1">
+                    {editingExerciseId ? 'Modifica los detalles del ejercicio' : 'Añade un nuevo ejercicio a tu lista'}
+                  </p>
+                </div>
+
+                <form onSubmit={handleAddExercise} className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Nombre</label>
+                    <input 
+                      type="text" 
+                      value={newExercise.name}
+                      onChange={(e) => setNewExercise({...newExercise, name: e.target.value})}
+                      placeholder="Ej. Flexiones"
+                      className="w-full px-5 py-3 bg-slate-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-xl outline-none transition-all text-sm font-medium"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Descripción</label>
+                    <textarea 
+                      value={newExercise.description}
+                      onChange={(e) => setNewExercise({...newExercise, description: e.target.value})}
+                      placeholder="Ej. Mantén la espalda recta..."
+                      className="w-full px-5 py-3 bg-slate-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-xl outline-none transition-all text-sm font-medium min-h-[80px] resize-none"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Duración</label>
+                      <input 
+                        type="text" 
+                        value={newExercise.duration}
+                        onChange={(e) => setNewExercise({...newExercise, duration: e.target.value})}
+                        placeholder="Ej. 15 min"
+                        className="w-full px-5 py-3 bg-slate-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-xl outline-none transition-all text-sm font-medium"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase ml-2">Intensidad</label>
+                      <select 
+                        value={newExercise.intensity}
+                        onChange={(e) => setNewExercise({...newExercise, intensity: e.target.value as any})}
+                        className="w-full px-5 py-3 bg-slate-50 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-xl outline-none transition-all text-sm font-medium"
+                      >
+                        <option value="low">Baja</option>
+                        <option value="medium">Media</option>
+                        <option value="high">Alta</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button 
+                    type="submit"
+                    className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all mt-4"
+                  >
+                    {editingExerciseId ? 'Guardar Cambios' : 'Añadir Ejercicio'}
+                  </button>
+                </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Challenge Modal */}
       <AnimatePresence>
         {showChallengeModal && (
@@ -1660,7 +1908,13 @@ function AppContent() {
               className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 relative z-10 shadow-2xl"
             >
               <button 
-                onClick={() => setShowChallengeModal(false)}
+                onClick={() => {
+                  setShowChallengeModal(false);
+                  setEditingChallengeId(null);
+                  setChallengeName('');
+                  setChallengeInstructions('');
+                  setChallengeTime('');
+                }}
                 className="absolute top-6 right-6 p-2 hover:bg-slate-100 rounded-full transition-colors"
               >
                 <X className="w-6 h-6 text-slate-400" />
@@ -1668,12 +1922,16 @@ function AppContent() {
 
               <div className="space-y-6">
                 <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto rotate-3 shadow-lg shadow-blue-200">
-                  <Plus className="text-white w-8 h-8" />
+                  {editingChallengeId ? <Settings className="text-white w-8 h-8" /> : <Plus className="text-white w-8 h-8" />}
                 </div>
                 
                 <div className="text-center">
-                  <h3 className="text-2xl font-bold text-slate-900">Nuevo Reto Extra</h3>
-                  <p className="text-slate-500 text-sm mt-1">Personaliza tu entrenamiento</p>
+                  <h3 className="text-2xl font-bold text-slate-900">
+                    {editingChallengeId ? 'Editar Reto' : 'Nuevo Reto Extra'}
+                  </h3>
+                  <p className="text-slate-500 text-sm mt-1">
+                    {editingChallengeId ? 'Modifica los detalles de tu reto' : 'Personaliza tu entrenamiento'}
+                  </p>
                 </div>
 
                 <form onSubmit={handleAddChallenge} className="space-y-4">
@@ -1716,7 +1974,7 @@ function AppContent() {
                     type="submit"
                     className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all mt-4"
                   >
-                    Guardar Reto
+                    {editingChallengeId ? 'Guardar Cambios' : 'Crear Reto'}
                   </button>
                 </form>
               </div>
