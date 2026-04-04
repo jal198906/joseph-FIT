@@ -48,7 +48,7 @@ export default function LandingPage({ onStart, currentTime }: LandingPageProps) 
       <div className="absolute top-4 right-6 z-50">
         <div className="px-3 py-1.5 bg-white/50 backdrop-blur-md rounded-full border border-white/20 shadow-sm">
           <span className="text-xs font-bold text-slate-600 tabular-nums">
-            {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
           </span>
         </div>
       </div>

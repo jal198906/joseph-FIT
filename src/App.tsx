@@ -97,6 +97,7 @@ export default function App() {
   const [showScanner, setShowScanner] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [scanResult, setScanResult] = useState<any>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
 
   const cameraInputRef = React.useRef<HTMLInputElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -342,6 +343,7 @@ export default function App() {
 
     setIsAnalyzing(true);
     setScanResult(null);
+    setScanError(null);
 
     try {
       // Compress and resize image before sending to AI
@@ -380,9 +382,9 @@ export default function App() {
               const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
               resolve(dataUrl.split(',')[1]);
             };
-            img.onerror = reject;
+            img.onerror = () => reject(new Error("Error al cargar la imagen"));
           };
-          reader.onerror = reject;
+          reader.onerror = () => reject(new Error("Error al leer el archivo"));
         });
       };
 
@@ -412,13 +414,17 @@ export default function App() {
       const text = response.text;
       if (!text) throw new Error("No se recibió respuesta de la IA");
       
-      const result = JSON.parse(text);
+      // Clean text in case model adds markdown blocks
+      const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
+      const result = JSON.parse(cleanJson);
       setScanResult(result);
     } catch (error) {
       console.error("Error analyzing image:", error);
-      alert("Hubo un problema al analizar la imagen. Por favor, intenta de nuevo con una imagen más clara.");
+      setScanError("Hubo un problema al analizar la imagen. Por favor, intenta de nuevo con una imagen más clara.");
     } finally {
       setIsAnalyzing(false);
+      // Reset input value so same file can be selected again
+      e.target.value = '';
     }
   };
 
@@ -520,7 +526,7 @@ export default function App() {
           </h1>
           <div className="ml-2 px-2 py-1 bg-slate-100 rounded-md">
             <span className="text-[10px] font-bold text-slate-500 tabular-nums">
-              {format(currentTime, 'HH:mm')}
+              {format(currentTime, 'hh:mm aa')}
             </span>
           </div>
         </div>
@@ -1199,21 +1205,28 @@ export default function App() {
                 </div>
 
                 {!scanResult && !isAnalyzing && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <button 
-                      onClick={() => cameraInputRef.current?.click()}
-                      className="py-5 bg-blue-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all flex flex-col items-center gap-2"
-                    >
-                      <Camera className="w-6 h-6" />
-                      Cámara
-                    </button>
-                    <button 
-                      onClick={() => fileInputRef.current?.click()}
-                      className="py-5 bg-slate-800 text-white rounded-2xl font-bold text-sm shadow-lg shadow-slate-200 hover:bg-slate-900 transition-all flex flex-col items-center gap-2"
-                    >
-                      <Upload className="w-6 h-6" />
-                      Galería
-                    </button>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <button 
+                        onClick={() => cameraInputRef.current?.click()}
+                        className="py-5 bg-blue-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all flex flex-col items-center gap-2"
+                      >
+                        <Camera className="w-6 h-6" />
+                        Cámara
+                      </button>
+                      <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="py-5 bg-slate-800 text-white rounded-2xl font-bold text-sm shadow-lg shadow-slate-200 hover:bg-slate-900 transition-all flex flex-col items-center gap-2"
+                      >
+                        <Upload className="w-6 h-6" />
+                        Galería
+                      </button>
+                    </div>
+                    {scanError && (
+                      <div className="p-4 bg-red-50 border border-red-100 rounded-2xl">
+                        <p className="text-xs text-red-600 font-medium">{scanError}</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
