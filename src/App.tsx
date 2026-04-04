@@ -147,8 +147,8 @@ function AppContent() {
   const [apiFoods, setApiFoods] = useState<any[]>([]);
   const [isSearchingApi, setIsSearchingApi] = useState(false);
 
-  // Custom Diets state
-  const [customDiets, setCustomDiets] = useState<Diet[]>([]);
+  // Diets state
+  const [dietList, setDietList] = useState<Diet[]>(DIETS);
   const [showDietModal, setShowDietModal] = useState(false);
   const [editingDietId, setEditingDietId] = useState<string | null>(null);
   const [newDiet, setNewDiet] = useState<Partial<Diet>>({
@@ -387,9 +387,9 @@ function AppContent() {
       setExtraChallenges(JSON.parse(savedChallenges));
     }
 
-    const savedCustomDiets = localStorage.getItem('joseph_fit_custom_diets');
-    if (savedCustomDiets) {
-      setCustomDiets(JSON.parse(savedCustomDiets));
+    const savedDiets = localStorage.getItem('joseph_fit_diets');
+    if (savedDiets) {
+      setDietList(JSON.parse(savedDiets));
     }
 
     const savedDailyTasks = localStorage.getItem('joseph_fit_daily_tasks');
@@ -470,12 +470,11 @@ function AppContent() {
   const handleAddDiet = (e: React.FormEvent) => {
     e.preventDefault();
     if (newDiet.name && newDiet.description) {
+      let updatedDiets: Diet[];
       if (editingDietId) {
-        const updatedDiets = customDiets.map(d => 
+        updatedDiets = dietList.map(d => 
           d.id === editingDietId ? { ...d, ...newDiet } as Diet : d
         );
-        setCustomDiets(updatedDiets);
-        localStorage.setItem('joseph_fit_custom_diets', JSON.stringify(updatedDiets));
         if (selectedDiet.id === editingDietId) {
           setSelectedDiet({ ...selectedDiet, ...newDiet } as Diet);
         }
@@ -487,10 +486,11 @@ function AppContent() {
           exerciseIds: newDiet.exerciseIds || [],
           challengeIds: newDiet.challengeIds || []
         };
-        const updatedDiets = [...customDiets, dietToAdd];
-        setCustomDiets(updatedDiets);
-        localStorage.setItem('joseph_fit_custom_diets', JSON.stringify(updatedDiets));
+        updatedDiets = [...dietList, dietToAdd];
       }
+      
+      setDietList(updatedDiets);
+      localStorage.setItem('joseph_fit_diets', JSON.stringify(updatedDiets));
       
       setShowDietModal(false);
       setEditingDietId(null);
@@ -512,11 +512,11 @@ function AppContent() {
   };
 
   const removeDiet = (id: string) => {
-    const updatedDiets = customDiets.filter(d => d.id !== id);
-    setCustomDiets(updatedDiets);
-    localStorage.setItem('joseph_fit_custom_diets', JSON.stringify(updatedDiets));
+    const updatedDiets = dietList.filter(d => d.id !== id);
+    setDietList(updatedDiets);
+    localStorage.setItem('joseph_fit_diets', JSON.stringify(updatedDiets));
     if (selectedDiet.id === id) {
-      setSelectedDiet(DIETS[0]);
+      setSelectedDiet(updatedDiets.length > 0 ? updatedDiets[0] : DIETS[0]);
     }
   };
 
@@ -526,7 +526,7 @@ function AppContent() {
     setShowDietModal(true);
   };
 
-  const allDiets = [...DIETS, ...customDiets];
+  const allDiets = dietList;
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1181,30 +1181,28 @@ function AppContent() {
                     )}
                     onClick={() => setSelectedDiet(diet)}
                   >
-                    {customDiets.some(d => d.id === diet.id) && (
-                      <div className="absolute top-4 right-4 flex gap-2 transition-all">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            startEditDiet(diet);
-                          }}
-                          className="p-1 text-slate-400 hover:text-blue-600"
-                          title="Editar dieta"
-                        >
-                          <Settings className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeDiet(diet.id);
-                          }}
-                          className="p-1 text-slate-400 hover:text-red-500"
-                          title="Eliminar dieta"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
+                    <div className="absolute top-4 right-4 flex gap-2 transition-all">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          startEditDiet(diet);
+                        }}
+                        className="p-1 text-slate-400 hover:text-blue-600"
+                        title="Editar dieta"
+                      >
+                        <Settings className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeDiet(diet.id);
+                        }}
+                        className="p-1 text-slate-400 hover:text-red-500"
+                        title="Eliminar dieta"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
                     <div className="flex items-center justify-between mb-4">
                       <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full uppercase">
                         {diet.type}
