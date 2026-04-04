@@ -33,11 +33,11 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { format, addDays, startOfToday, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { DIETS, EXERCISES, type Diet, type Exercise, type DailyPlan, type Challenge } from './types';
-import { FOOD_DATABASE, type FoodInfo } from './data/foods';
-import { cn } from './lib/utils';
+import { DIETS, EXERCISES, type Diet, type Exercise, type DailyPlan, type Challenge } from '@/src/types';
+import { FOOD_DATABASE, type FoodInfo } from '@/src/data/foods';
+import { cn } from '@/src/lib/utils';
 import { GoogleGenAI } from "@google/genai";
-import LandingPage from './components/LandingPage';
+import LandingPage from '@/src/components/LandingPage';
 
 export default function App() {
   const [showLanding, setShowLanding] = useState(true);
